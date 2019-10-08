@@ -39,12 +39,7 @@ class Sudoku:
         return n in [self.board[_][y] for _ in range(9)]
 
     def square_col(self, x, y, n):
-        new_x = x//3*3
-        new_y = y//3*3
-        square_list = [self.board[a][b] for a in range(new_x, new_x+3) for b in range(new_y, new_y+3)]
-
-        if n in square_list:
-            return True
+        return n in [self.board[a][b] for a in range(x//3*3, x//3*3+3) for b in range(y//3*3, y//3*3+3)]
 
     # Count the number we set into the board
     def setNum(self):
@@ -67,11 +62,8 @@ class Sudoku:
         return True
 
     def update(self):
-        if self.j == 8:
-            self.i += 1
-            self.j = 0
-        else:
-            self.j += 1
+        if self.j == 8: self.i, self.j = self.i+1, 0
+        else: self.j += 1
 
     def run(self):
         while True:
