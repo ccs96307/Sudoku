@@ -90,6 +90,8 @@ class Sudoku:
 
 
 if __name__ == '__main__':
+    import time
+    startTime = time.time()
     question = [[1, 0, 0, 0, 7, 9, 0, 8, 0],
                 [5, 9, 0, 0, 0, 2, 7, 3, 4],
                 [7, 0, 0, 5, 3, 8, 0, 0, 9],
@@ -103,3 +105,4 @@ if __name__ == '__main__':
     sudoku = Sudoku(question)
     sudoku.run()
     sudoku.plotBoard()
+    print('cost time:', time.time()-startTime)
