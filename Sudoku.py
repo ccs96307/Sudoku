@@ -87,22 +87,3 @@ class Sudoku:
                 self.positionState[self.i][self.j] = [_ for _ in range(1, 10)]
                 self.i, self.j = self.setNumberHistory.pop()
                 self.board[self.i][self.j] = 0
-
-
-if __name__ == '__main__':
-    import time
-    startTime = time.time()
-    question = [[1, 0, 0, 0, 7, 9, 0, 8, 0],
-                [5, 9, 0, 0, 0, 2, 7, 3, 4],
-                [7, 0, 0, 5, 3, 8, 0, 0, 9],
-                [0, 0, 0, 3, 4, 0, 0, 2, 0],
-                [3, 4, 0, 7, 2, 0, 0, 5, 1],
-                [0, 5, 0, 8, 0, 0, 0, 0, 3],
-                [0, 0, 7, 9, 0, 3, 5, 0, 8],
-                [9, 1, 0, 0, 0, 0, 3, 0, 0],
-                [6, 0, 0, 0, 0, 0, 1, 9, 0]]
-
-    sudoku = Sudoku(question)
-    sudoku.run()
-    sudoku.plotBoard()
-    print('cost time:', time.time()-startTime)

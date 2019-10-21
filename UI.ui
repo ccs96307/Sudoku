@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>737</width>
-    <height>866</height>
+    <height>876</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -26,7 +26,7 @@
     <property name="styleSheet">
      <string notr="true">background-color: Black;</string>
     </property>
-    <widget class="QPushButton" name="pushButton">
+    <widget class="QPushButton" name="pushButton00">
      <property name="geometry">
       <rect>
        <x>3</x>
@@ -46,18 +46,14 @@
      <property name="styleSheet">
       <string notr="true">color: rgb(0, 0, 0);
 background-color: rgb(200, 200, 200);
-border-style:none;
 border:1px solid #3f3f3f; 
-
-padding:5px;
-min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_2">
+    <widget class="QPushButton" name="pushButton01">
      <property name="geometry">
       <rect>
        <x>84</x>
@@ -85,10 +81,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_3">
+    <widget class="QPushButton" name="pushButton02">
      <property name="geometry">
       <rect>
        <x>165</x>
@@ -116,10 +112,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_7">
+    <widget class="QPushButton" name="pushButton04">
      <property name="geometry">
       <rect>
        <x>329</x>
@@ -147,10 +143,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_8">
+    <widget class="QPushButton" name="pushButton05">
      <property name="geometry">
       <rect>
        <x>410</x>
@@ -178,10 +174,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_9">
+    <widget class="QPushButton" name="pushButton03">
      <property name="geometry">
       <rect>
        <x>248</x>
@@ -209,10 +205,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_10">
+    <widget class="QPushButton" name="pushButton06">
      <property name="geometry">
       <rect>
        <x>493</x>
@@ -240,10 +236,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_11">
+    <widget class="QPushButton" name="pushButton08">
      <property name="geometry">
       <rect>
        <x>655</x>
@@ -271,10 +267,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_12">
+    <widget class="QPushButton" name="pushButton07">
      <property name="geometry">
       <rect>
        <x>574</x>
@@ -302,10 +298,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_13">
+    <widget class="QPushButton" name="pushButton13">
      <property name="geometry">
       <rect>
        <x>248</x>
@@ -333,10 +329,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_14">
+    <widget class="QPushButton" name="pushButton17">
      <property name="geometry">
       <rect>
        <x>574</x>
@@ -364,10 +360,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_15">
+    <widget class="QPushButton" name="pushButton11">
      <property name="geometry">
       <rect>
        <x>84</x>
@@ -395,10 +391,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_16">
+    <widget class="QPushButton" name="pushButton16">
      <property name="geometry">
       <rect>
        <x>493</x>
@@ -426,10 +422,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_17">
+    <widget class="QPushButton" name="pushButton18">
      <property name="geometry">
       <rect>
        <x>655</x>
@@ -457,10 +453,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_18">
+    <widget class="QPushButton" name="pushButton12">
      <property name="geometry">
       <rect>
        <x>165</x>
@@ -488,10 +484,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_19">
+    <widget class="QPushButton" name="pushButton15">
      <property name="geometry">
       <rect>
        <x>410</x>
@@ -519,10 +515,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_20">
+    <widget class="QPushButton" name="pushButton10">
      <property name="geometry">
       <rect>
        <x>3</x>
@@ -550,10 +546,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_21">
+    <widget class="QPushButton" name="pushButton14">
      <property name="geometry">
       <rect>
        <x>329</x>
@@ -581,10 +577,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_22">
+    <widget class="QPushButton" name="pushButton23">
      <property name="geometry">
       <rect>
        <x>248</x>
@@ -612,10 +608,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_23">
+    <widget class="QPushButton" name="pushButton25">
      <property name="geometry">
       <rect>
        <x>410</x>
@@ -643,10 +639,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_28">
+    <widget class="QPushButton" name="pushButton27">
      <property name="geometry">
       <rect>
        <x>574</x>
@@ -674,10 +670,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_30">
+    <widget class="QPushButton" name="pushButton21">
      <property name="geometry">
       <rect>
        <x>84</x>
@@ -705,10 +701,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_31">
+    <widget class="QPushButton" name="pushButton22">
      <property name="geometry">
       <rect>
        <x>165</x>
@@ -736,10 +732,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_33">
+    <widget class="QPushButton" name="pushButton20">
      <property name="geometry">
       <rect>
        <x>3</x>
@@ -767,10 +763,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_35">
+    <widget class="QPushButton" name="pushButton26">
      <property name="geometry">
       <rect>
        <x>493</x>
@@ -798,10 +794,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_38">
+    <widget class="QPushButton" name="pushButton28">
      <property name="geometry">
       <rect>
        <x>655</x>
@@ -829,10 +825,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_39">
+    <widget class="QPushButton" name="pushButton24">
      <property name="geometry">
       <rect>
        <x>329</x>
@@ -860,10 +856,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_24">
+    <widget class="QPushButton" name="pushButton31">
      <property name="geometry">
       <rect>
        <x>84</x>
@@ -891,10 +887,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_25">
+    <widget class="QPushButton" name="pushButton35">
      <property name="geometry">
       <rect>
        <x>410</x>
@@ -922,10 +918,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_26">
+    <widget class="QPushButton" name="pushButton30">
      <property name="geometry">
       <rect>
        <x>3</x>
@@ -953,10 +949,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_27">
+    <widget class="QPushButton" name="pushButton34">
      <property name="geometry">
       <rect>
        <x>329</x>
@@ -984,10 +980,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_29">
+    <widget class="QPushButton" name="pushButton38">
      <property name="geometry">
       <rect>
        <x>655</x>
@@ -1015,10 +1011,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_32">
+    <widget class="QPushButton" name="pushButton33">
      <property name="geometry">
       <rect>
        <x>248</x>
@@ -1038,7 +1034,6 @@ min-height:20px;
      <property name="styleSheet">
       <string notr="true">color: rgb(0, 0, 0);
 background-color: rgb(200, 200, 200);
-border-style:none;
 border:1px solid #3f3f3f; 
 
 padding:5px;
@@ -1046,10 +1041,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_34">
+    <widget class="QPushButton" name="pushButton32">
      <property name="geometry">
       <rect>
        <x>165</x>
@@ -1077,10 +1072,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_36">
+    <widget class="QPushButton" name="pushButton36">
      <property name="geometry">
       <rect>
        <x>493</x>
@@ -1108,10 +1103,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_37">
+    <widget class="QPushButton" name="pushButton37">
      <property name="geometry">
       <rect>
        <x>574</x>
@@ -1139,10 +1134,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_40">
+    <widget class="QPushButton" name="pushButton50">
      <property name="geometry">
       <rect>
        <x>3</x>
@@ -1170,10 +1165,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_41">
+    <widget class="QPushButton" name="pushButton44">
      <property name="geometry">
       <rect>
        <x>329</x>
@@ -1201,10 +1196,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_42">
+    <widget class="QPushButton" name="pushButton47">
      <property name="geometry">
       <rect>
        <x>574</x>
@@ -1232,10 +1227,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_43">
+    <widget class="QPushButton" name="pushButton58">
      <property name="geometry">
       <rect>
        <x>655</x>
@@ -1263,10 +1258,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_44">
+    <widget class="QPushButton" name="pushButton41">
      <property name="geometry">
       <rect>
        <x>84</x>
@@ -1294,10 +1289,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_45">
+    <widget class="QPushButton" name="pushButton40">
      <property name="geometry">
       <rect>
        <x>3</x>
@@ -1325,10 +1320,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_46">
+    <widget class="QPushButton" name="pushButton53">
      <property name="geometry">
       <rect>
        <x>248</x>
@@ -1356,10 +1351,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_47">
+    <widget class="QPushButton" name="pushButton48">
      <property name="geometry">
       <rect>
        <x>655</x>
@@ -1387,10 +1382,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_48">
+    <widget class="QPushButton" name="pushButton51">
      <property name="geometry">
       <rect>
        <x>84</x>
@@ -1418,10 +1413,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_49">
+    <widget class="QPushButton" name="pushButton56">
      <property name="geometry">
       <rect>
        <x>493</x>
@@ -1449,10 +1444,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_50">
+    <widget class="QPushButton" name="pushButton45">
      <property name="geometry">
       <rect>
        <x>410</x>
@@ -1480,10 +1475,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_51">
+    <widget class="QPushButton" name="pushButton43">
      <property name="geometry">
       <rect>
        <x>248</x>
@@ -1503,18 +1498,13 @@ min-height:20px;
      <property name="styleSheet">
       <string notr="true">color: rgb(0, 0, 0);
 background-color: rgb(200, 200, 200);
-border-style:none;
-border:1px solid #3f3f3f; 
-
-padding:5px;
-min-height:20px;
-</string>
+border:1px solid #3f3f3f; </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_52">
+    <widget class="QPushButton" name="pushButton55">
      <property name="geometry">
       <rect>
        <x>410</x>
@@ -1542,10 +1532,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_53">
+    <widget class="QPushButton" name="pushButton42">
      <property name="geometry">
       <rect>
        <x>165</x>
@@ -1573,10 +1563,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_54">
+    <widget class="QPushButton" name="pushButton52">
      <property name="geometry">
       <rect>
        <x>165</x>
@@ -1604,10 +1594,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_55">
+    <widget class="QPushButton" name="pushButton57">
      <property name="geometry">
       <rect>
        <x>574</x>
@@ -1635,10 +1625,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_56">
+    <widget class="QPushButton" name="pushButton54">
      <property name="geometry">
       <rect>
        <x>329</x>
@@ -1666,10 +1656,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_57">
+    <widget class="QPushButton" name="pushButton46">
      <property name="geometry">
       <rect>
        <x>493</x>
@@ -1697,10 +1687,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_58">
+    <widget class="QPushButton" name="pushButton63">
      <property name="geometry">
       <rect>
        <x>248</x>
@@ -1728,10 +1718,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_59">
+    <widget class="QPushButton" name="pushButton60">
      <property name="geometry">
       <rect>
        <x>3</x>
@@ -1759,10 +1749,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_60">
+    <widget class="QPushButton" name="pushButton62">
      <property name="geometry">
       <rect>
        <x>165</x>
@@ -1790,10 +1780,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_61">
+    <widget class="QPushButton" name="pushButton66">
      <property name="geometry">
       <rect>
        <x>493</x>
@@ -1821,10 +1811,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_62">
+    <widget class="QPushButton" name="pushButton68">
      <property name="geometry">
       <rect>
        <x>655</x>
@@ -1852,10 +1842,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_63">
+    <widget class="QPushButton" name="pushButton64">
      <property name="geometry">
       <rect>
        <x>329</x>
@@ -1883,10 +1873,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_64">
+    <widget class="QPushButton" name="pushButton67">
      <property name="geometry">
       <rect>
        <x>574</x>
@@ -1914,10 +1904,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_65">
+    <widget class="QPushButton" name="pushButton65">
      <property name="geometry">
       <rect>
        <x>410</x>
@@ -1945,10 +1935,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_66">
+    <widget class="QPushButton" name="pushButton61">
      <property name="geometry">
       <rect>
        <x>84</x>
@@ -1976,10 +1966,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_67">
+    <widget class="QPushButton" name="pushButton78">
      <property name="geometry">
       <rect>
        <x>655</x>
@@ -2007,10 +1997,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_68">
+    <widget class="QPushButton" name="pushButton74">
      <property name="geometry">
       <rect>
        <x>329</x>
@@ -2038,10 +2028,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_69">
+    <widget class="QPushButton" name="pushButton76">
      <property name="geometry">
       <rect>
        <x>493</x>
@@ -2069,10 +2059,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_70">
+    <widget class="QPushButton" name="pushButton71">
      <property name="geometry">
       <rect>
        <x>84</x>
@@ -2100,10 +2090,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_71">
+    <widget class="QPushButton" name="pushButton72">
      <property name="geometry">
       <rect>
        <x>165</x>
@@ -2131,10 +2121,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_72">
+    <widget class="QPushButton" name="pushButton73">
      <property name="geometry">
       <rect>
        <x>248</x>
@@ -2162,10 +2152,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_73">
+    <widget class="QPushButton" name="pushButton70">
      <property name="geometry">
       <rect>
        <x>3</x>
@@ -2193,10 +2183,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_74">
+    <widget class="QPushButton" name="pushButton77">
      <property name="geometry">
       <rect>
        <x>574</x>
@@ -2224,10 +2214,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_75">
+    <widget class="QPushButton" name="pushButton75">
      <property name="geometry">
       <rect>
        <x>410</x>
@@ -2255,10 +2245,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_84">
+    <widget class="QPushButton" name="pushButton85">
      <property name="geometry">
       <rect>
        <x>410</x>
@@ -2286,10 +2276,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_78">
+    <widget class="QPushButton" name="pushButton86">
      <property name="geometry">
       <rect>
        <x>493</x>
@@ -2317,10 +2307,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_77">
+    <widget class="QPushButton" name="pushButton84">
      <property name="geometry">
       <rect>
        <x>329</x>
@@ -2348,10 +2338,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_79">
+    <widget class="QPushButton" name="pushButton81">
      <property name="geometry">
       <rect>
        <x>84</x>
@@ -2379,10 +2369,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_81">
+    <widget class="QPushButton" name="pushButton83">
      <property name="geometry">
       <rect>
        <x>248</x>
@@ -2410,10 +2400,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_83">
+    <widget class="QPushButton" name="pushButton87">
      <property name="geometry">
       <rect>
        <x>574</x>
@@ -2441,10 +2431,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_76">
+    <widget class="QPushButton" name="pushButton88">
      <property name="geometry">
       <rect>
        <x>655</x>
@@ -2472,10 +2462,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_80">
+    <widget class="QPushButton" name="pushButton82">
      <property name="geometry">
       <rect>
        <x>165</x>
@@ -2503,10 +2493,10 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_82">
+    <widget class="QPushButton" name="pushButton80">
      <property name="geometry">
       <rect>
        <x>3</x>
@@ -2534,15 +2524,15 @@ min-height:20px;
 </string>
      </property>
      <property name="text">
-      <string>0</string>
+      <string/>
      </property>
     </widget>
    </widget>
-   <widget class="QPushButton" name="pushButton_85">
+   <widget class="QPushButton" name="GoButton">
     <property name="geometry">
      <rect>
       <x>0</x>
-      <y>740</y>
+      <y>750</y>
       <width>181</width>
       <height>71</height>
      </rect>
@@ -2569,11 +2559,11 @@ border-radius:35px;</string>
      <string>Go</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="pushButton_86">
+   <widget class="QPushButton" name="ClearButton">
     <property name="geometry">
      <rect>
       <x>190</x>
-      <y>740</y>
+      <y>750</y>
       <width>181</width>
       <height>71</height>
      </rect>
@@ -2604,7 +2594,7 @@ border-radius:35px;</string>
     <property name="geometry">
      <rect>
       <x>380</x>
-      <y>750</y>
+      <y>760</y>
       <width>351</width>
       <height>51</height>
      </rect>
