@@ -9,7 +9,6 @@ pygame.init()
 pygame.display.set_caption('Sudoku')
 screen = pygame.display.set_mode([1200, 800])
 my_font = pygame.font.Font('Fonts/mingliu.ttc', 32)
-#start_time = time.time()
 running = True
 
 board = [[5, 3, 0, 0, 7, 0, 0, 0, 0],

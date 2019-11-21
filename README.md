@@ -2,4 +2,8 @@
 A solver of Sudoku.
 
 # TODO
-GUI
+- [ ] GUI
+- [ ] Generator
+
+
+
