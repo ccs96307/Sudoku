@@ -1,89 +1,119 @@
-# -*- coding: utf-8 -*-
+import time
 
 
-class Sudoku:
-    def __init__(self, board):
-        if board and len(board) == 9 and len(board[0]) == 9: self.board = board
-        else: raise ValueError
+# Settings
+start_time = time.time()
 
-        # List all possible number
-        self.positionState = [[[n for n in range(1, 10)] for r in range(9)] for c in range(9)]
-        self.setNumberHistory = []
-        self.boardNum = self.setNum()
-        self.i, self.j = self.simplifyBoard()
 
-    def plotBoard(self):
-        for n in range(9): print(self.board[n])
-        print('-------------------------------------', self.setNum())
+class Sudoku():
+    def __init__(self):
+        self.board = [[8, 0, 0, 0, 0, 0, 0, 0, 0],
+                      [0, 0, 3, 6, 0, 0, 0, 0, 0],
+                      [0, 7, 0, 0, 9, 0, 2, 0, 0],
+                      [0, 5, 0, 0, 0, 7, 0, 0, 0],
+                      [0, 0, 0, 0, 4, 5, 7, 0, 0],
+                      [0, 0, 0, 1, 0, 0, 0, 3, 0],
+                      [0, 0, 1, 0, 0, 0, 0, 6, 8],
+                      [0, 0, 8, 5, 0, 0, 0, 1, 0],
+                      [0, 9, 0, 0, 0, 0, 4, 0, 0]]
 
-    def onlyOneCheck(self, x, y):
-        new_x, new_y = x//3*3, y//3*3
-        row = self.board[x]
-        column = [self.board[_][y] for _ in range(9)]
-        square = [self.board[a][b] for a in range(new_x, new_x+3) for b in range(new_y, new_y+3)]
+        self.size = len(self.board[0])
+        self.choices = [-1 if self.board[i][j] else 1
+                        for i in range(self.size)
+                        for j in range(self.size)]
+        
+        self.x = 0
+        self.y = 0
 
-        total_collision_num_list = list(set(row+column+square))
-        total_num_list = [n for n in range(1, 10)]
+    def plot(self):
+        cn = 0
+        for row in self.board:
+            print(row)
 
-        for n in total_collision_num_list:
-            if n in total_num_list:
-                total_num_list.remove(n)
+            for _ in row:
+                if _ != 0:
+                    cn += 1
 
-        if len(total_num_list) == 1: return total_num_list[0]
+        print('===========================', cn)
+
+    def row(self, n):
+        return n in self.board[self.y]
+
+    def col(self, n):
+        return n in [self.board[_][self.x]
+                     for _ in range(9)]
+
+    def square(self, n):
+        return n in [self.board[b][a]
+                     for a in range(self.x//3*3, self.x//3*3+3)
+                     for b in range(self.y//3*3, self.y//3*3+3)]
+
+    def collision(self, n):
+        if self.row(n) or\
+           self.col(n) or\
+           self.square(n):
+            return True
         else: return False
 
-    def row_col(self, x, n):
-        return n in self.board[x]
+    def backward(self):
+        self.board[self.y][self.x] = 0
+        self.choices[self.c] = 1
+        if self.x == 0:
+            self.x = 8
+            self.y -= 1
+        else:
+            self.x -= 1
 
-    def column_col(self, y, n):
-        return n in [self.board[_][y] for _ in range(9)]
+        while self.choices[self.y * self.size + self.x] == -1:
+            if self.x == 0:
+                self.x = 8
+                self.y -= 1
+            else:
+                self.x -= 1
 
-    def square_col(self, x, y, n):
-        return n in [self.board[a][b] for a in range(x//3*3, x//3*3+3) for b in range(y//3*3, y//3*3+3)]
+    def forward(self):
+        if self.x == 8:
+            self.x = 0
+            self.y += 1
+        else:
+            self.x += 1
 
-    # Count the number we set into the board
-    def setNum(self):
-        return sum([1 for a in range(9) for b in range(9) if self.board[a][b]])
-
-    def simplifyBoard(self):
-        for a in range(9):
-            for b in range(9):
-                if self.board[a][b] == 0:
-                    result = self.onlyOneCheck(a, b)
-                    if result: self.board[a][b] = result
-
-        return 0, 0
-
-    def check_end(self):
-        for r in range(9):
-            if 0 in self.board[r]:
+    def isEnd(self):
+        for row in self.board:
+            if 0 in row:
                 return False
 
         return True
 
-    def update(self):
-        if self.j == 8: self.i, self.j = self.i+1, 0
-        else: self.j += 1
-
     def run(self):
-        while True:
-            if self.board[self.i][self.j]:
-                self.update()
-                continue
+        while not self.isEnd():
+            self.c = self.y*self.size+self.x
+            if self.choices[self.c] != -1:
+                if self.collision(self.choices[self.c]):
 
-            if self.positionState[self.i][self.j]:
-                n = self.positionState[self.i][self.j].pop()
-                if not (self.row_col(self.i, n) or self.column_col(self.j, n) or self.square_col(self.i, self.j, n)):
-                    self.board[self.i][self.j] = n
-                    self.setNumberHistory.append([self.i, self.j])
-                    result = self.check_end()
+                    # Error
+                    if self.choices[self.c] != 9:
+                        self.choices[self.c] += 1
+                        continue
 
-                    if result:
-                        break
+                    # Back
+                    else:
+                        self.backward()
 
-                    self.update()
+                # Success
+                else:
+                    self.board[self.y][self.x] = self.choices[self.c]
+                    # plot()
+
+                    self.forward()
 
             else:
-                self.positionState[self.i][self.j] = [_ for _ in range(1, 10)]
-                self.i, self.j = self.setNumberHistory.pop()
-                self.board[self.i][self.j] = 0
+                self.forward()
+
+        self.plot()
+        print('time:', time.time()-start_time)
+
+
+if __name__ == '__main__':
+    s = Sudoku()
+    s.run()

@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from UI import Ui_MainWindow
 import sys
-from Sudoku import Sudoku
+from Sudoku_old import Sudoku
 
 
 class MainWindow(QMainWindow):
