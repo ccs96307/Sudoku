@@ -1,0 +1,1 @@
+"""Beautiful Sudoku application package."""
