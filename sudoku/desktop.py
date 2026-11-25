@@ -27,9 +27,10 @@ QPushButton#number { background: #1d2a27; border: 1px solid #31433d; font-size: 
 QPushButton#number:hover { background: #c4e7a2; color: #14231b; }
 QPushButton#cell { background: #172320; border: 0; border-radius: 0; color: #dff1e2; font-size: 23px; padding: 0; }
 QPushButton#cell:disabled { color: #f2f2de; background: #22332d; }
-QPushButton#cell[selected="true"] { background: #41634f; }
 QPushButton#cell[related="true"] { background: #202e2a; }
 QPushButton#cell[same="true"] { background: #344c3c; color: #c4e7a2; }
+QPushButton#cell[selected="true"] { background: #41634f; }
+QPushButton#cell[note="true"] { color: #91c7a4; font-size: 9px; }
 QPushButton#cell[error="true"] { color: #ff9385; background: #482e2b; }
 QComboBox { background: #1d2a27; border: 1px solid #344b43; border-radius: 10px; padding: 9px 12px; }
 QFrame#board { background: #c4e7a2; border-radius: 16px; }
@@ -211,7 +212,7 @@ class SudokuWindow(QMainWindow):
 
     def _hint(self):
         row, column = self.selected
-        if self.givens[row][column]:
+        if self.grid[row][column]:
             row, column = next(((r, c) for r in range(9) for c in range(9)
                                 if not self.grid[r][c]), (row, column))
             self.selected = (row, column)
@@ -245,7 +246,9 @@ class SudokuWindow(QMainWindow):
             for c in range(9):
                 button = self.cells[r][c]
                 value = self.grid[r][c]
-                button.setText(str(value) if value else "·" if self.notes[r][c] else "")
+                button.setText(str(value) if value else
+                               "".join(str(note) for note in sorted(self.notes[r][c])))
+                button.setProperty("note", bool(self.notes[r][c]) and not value)
                 button.setEnabled(not self.givens[r][c])
                 button.setProperty("selected", r == row and c == column)
                 button.setProperty("related", r == row or c == column or
