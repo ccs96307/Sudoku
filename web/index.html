@@ -42,20 +42,31 @@
         <button id="notes">✎ <span>Notes</span></button>
         <button id="hint">✧ <span>Hint</span></button>
         <button id="erase">⌫ <span>Erase</span></button>
+        <button id="solve" title="Reveal the complete solution">✓ <span>Solve</span></button>
       </div>
       <div class="progress-row"><span id="progress-label">0 / 81 filled</span><div class="progress-track"><span id="progress"></span></div></div>
     </section>
-    <footer><span>MADE FOR A MOMENT OF CALM</span><span>ARROWS TO MOVE · 1–9 TO FILL · N FOR NOTES</span></footer>
+    <footer><span>MADE FOR A MOMENT OF CALM</span><span>ARROWS · 1–9 FILL · N NOTES · S SOLVES</span></footer>
   </main>
   <dialog class="settings-dialog" id="settings-dialog" aria-labelledby="settings-title">
-    <form method="dialog" id="settings-form">
+    <form id="settings-form" method="dialog">
       <div class="settings-heading"><p class="eyebrow">MAKE IT YOURS</p><button class="dialog-close" value="cancel" aria-label="Close settings">×</button></div>
       <h2 id="settings-title">Your little corner.</h2>
-      <label class="setting-label" for="palette-select">Color palette</label>
-      <select id="palette-select" class="setting-select"></select>
+      <div class="theme-settings-layout">
+        <div>
+          <p class="setting-label">Choose a palette · 20 colors</p>
+          <div class="theme-picker" id="theme-picker" role="listbox" aria-label="Color palettes"></div>
+        </div>
+        <div class="theme-preview-panel">
+          <p class="setting-label">Live preview</p>
+          <p id="theme-preview-name" class="preview-name"></p>
+          <div id="theme-preview" class="theme-preview" role="img" aria-label="Sample Sudoku board"></div>
+          <div class="preview-legend"><span><i class="legend-given">5</i> Puzzle</span><span><i class="legend-entry">8</i> Yours</span></div>
+        </div>
+      </div>
       <label class="setting-check"><input id="rapid-entry" type="checkbox"><span><strong>Quick place</strong><small>Choose a number, then tap multiple squares to place it.</small></span></label>
-      <p class="setting-caption">Your choices stay on this device.</p>
-      <button class="new-game settings-done" value="save">Done <span>✓</span></button>
+      <p class="setting-caption">Preview applies immediately. Cancel restores your saved palette.</p>
+      <div class="settings-buttons"><button class="settings-cancel" value="cancel">Cancel</button><button class="new-game settings-done" value="confirm">Confirm <span>✓</span></button></div>
     </form>
   </dialog>
   <div class="toast" id="toast" role="status"></div>

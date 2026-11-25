@@ -116,6 +116,7 @@ QPushButton#cell {
 }
 QPushButton#cell[related="true"] {
   background: @related@;
+  border: 1px solid @accent@;
 }
 QPushButton#cell[same="true"] {
   background: @same@;
@@ -130,12 +131,14 @@ QPushButton#cell[fixed="true"][related="true"] {
   background: @related@;
 }
 QPushButton#cell[fixed="true"][selected="true"] {
-  background: @selected@;
-  color: @given@;
+  background: @accent@;
+  color: @ink@;
+  border: 3px solid #ffffff;
 }
 QPushButton#cell[selected="true"] {
-  background: @selected@;
-  color: #ffffff;
+  background: @accent@;
+  color: @ink@;
+  border: 3px solid #ffffff;
 }
 QPushButton#cell[note="true"] {
   color: @accent@;
@@ -165,6 +168,25 @@ QDialog {
 QFrame#board {
   background: @accent@;
   border-radius: 16px;
+}
+QLabel#previewGiven {
+  color: @given@;
+  background: @panel2@;
+  font-size: 17px;
+  font-weight: 800;
+}
+QLabel#previewEntry {
+  color: @entry@;
+  background: @panel@;
+  font-size: 17px;
+  font-weight: 700;
+}
+QLabel#previewSelected {
+  color: @ink@;
+  background: @accent@;
+  border: 3px solid #ffffff;
+  font-size: 17px;
+  font-weight: 800;
 }
 """
 
@@ -198,6 +220,8 @@ class SudokuWindow(QMainWindow):
         self.timer = QTimer(self)
         self.timer.timeout.connect(self._tick)
         self.timer.start(1000)
+        if self.grid == self.solution:
+            self.timer.stop()
         self._render()
 
     def _build_ui(self):
@@ -281,6 +305,7 @@ class SudokuWindow(QMainWindow):
             ("Notes", self._toggle_notes),
             ("Hint", self._hint),
             ("Erase", self._erase),
+            ("Solve", self._solve_game),
         ]:
             button = QPushButton(title)
             button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
@@ -288,7 +313,7 @@ class SudokuWindow(QMainWindow):
             actions.addWidget(button)
         page.addLayout(actions)
         self.footer = self._label(
-            "CHOOSE A NUMBER · TAP CELLS TO REPEAT · ARROWS TO MOVE", "eyebrow"
+            "CHOOSE A NUMBER · TAP TO FILL · S TO SOLVE", "eyebrow"
         )
         self.footer.setAlignment(Qt.AlignmentFlag.AlignCenter)
         page.addWidget(self.footer)
@@ -309,7 +334,8 @@ class SudokuWindow(QMainWindow):
         self.setStyleSheet(stylesheet)
 
     def _show_settings(self):
-        """Show color and rapid-entry preferences."""
+        """Preview palettes and save preferences only when confirmed."""
+        original_theme = self.theme_name
         dialog = QDialog(self)
         dialog.setWindowTitle("Settings")
         form = QFormLayout(dialog)
@@ -319,21 +345,46 @@ class SudokuWindow(QMainWindow):
         rapid = QCheckBox("Choose a number, then tap cells to fill them")
         rapid.setChecked(self.rapid_entry)
         form.addRow("Color palette", palette)
+        preview = QFrame()
+        preview_grid = QGridLayout(preview)
+        preview_grid.setContentsMargins(5, 5, 5, 5)
+        preview_grid.setSpacing(3)
+        preview_roles = [
+            "previewGiven",
+            "previewGiven",
+            "previewEntry",
+            "previewEntry",
+            "previewSelected",
+            "previewGiven",
+            "previewEntry",
+            "previewGiven",
+            "previewEntry",
+        ]
+        for index, role in enumerate(preview_roles):
+            sample = QLabel(str(index % 9 + 1))
+            sample.setObjectName(role)
+            sample.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            sample.setMinimumSize(34, 34)
+            preview_grid.addWidget(sample, index // 3, index % 3)
+        form.addRow("Live preview", preview)
         form.addRow("Quick entry", rapid)
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok
             | QDialogButtonBox.StandardButton.Cancel
         )
+        buttons.button(QDialogButtonBox.StandardButton.Ok).setText("Confirm")
+        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("Cancel")
         buttons.accepted.connect(dialog.accept)
         buttons.rejected.connect(dialog.reject)
         form.addRow(buttons)
+        palette.currentTextChanged.connect(self._apply_theme)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.theme_name = palette.currentText()
             self.rapid_entry = rapid.isChecked()
             self.footer.setText(
-                "CHOOSE A NUMBER · TAP CELLS TO REPEAT · ARROWS TO MOVE"
+                "CHOOSE A NUMBER · TAP TO FILL · S TO SOLVE"
                 if self.rapid_entry
-                else "SELECT A CELL · PRESS 1–9 TO FILL · N FOR NOTES"
+                else "SELECT A CELL · PRESS 1–9 · S TO SOLVE"
             )
             self.armed_digit = None
             self.settings.setValue("theme", self.theme_name)
@@ -341,6 +392,8 @@ class SudokuWindow(QMainWindow):
             self._apply_theme(self.theme_name)
             self._render()
             self.status_label.setText("Settings saved.")
+        else:
+            self._apply_theme(original_theme)
 
     def _load_or_start(self):
         if _STATE_PATH.exists():
@@ -349,7 +402,63 @@ class SudokuWindow(QMainWindow):
                 self.grid = state["grid"]
                 self.givens = state["givens"]
                 self.solution = state["solution"]
-                self.elapsed = int(state.get("elapsed", 0))
+                boards = (self.grid, self.givens, self.solution)
+                if any(
+                    len(board) != 9
+                    or any(
+                        len(row) != 9
+                        or any(
+                            not isinstance(value, int) or not 0 <= value <= 9
+                            for value in row
+                        )
+                        for row in board
+                    )
+                    for board in boards
+                ):
+                    raise ValueError(
+                        "Saved Sudoku board has invalid dimensions."
+                    )
+                if (
+                    any(not value for row in self.solution for value in row)
+                    or not is_valid(self.solution)
+                    or not is_valid(self.givens)
+                ):
+                    raise ValueError("Saved Sudoku puzzle is invalid.")
+                if any(
+                    self.givens[row][column]
+                    and self.grid[row][column] != self.givens[row][column]
+                    for row in range(9)
+                    for column in range(9)
+                ):
+                    raise ValueError("Saved givens were modified.")
+                saved_notes = state.get("notes", [])
+                if len(saved_notes) == 9 and all(
+                    len(row) == 9 for row in saved_notes
+                ):
+                    self.notes = [
+                        [
+                            {
+                                value
+                                for value in values
+                                if isinstance(value, int) and 1 <= value <= 9
+                            }
+                            for values in row
+                        ]
+                        for row in saved_notes
+                    ]
+                else:
+                    self.notes = [[set() for _ in range(9)] for _ in range(9)]
+                saved_selection = state.get("selected", [0, 0])
+                self.selected = tuple(saved_selection)
+                if len(self.selected) != 2 or any(
+                    not isinstance(value, int) or not 0 <= value < 9
+                    for value in self.selected
+                ):
+                    self.selected = (0, 0)
+                self.elapsed = max(0, int(state.get("elapsed", 0)))
+                difficulty = state.get("difficulty", "medium")
+                if difficulty in {"easy", "medium", "hard", "expert"}:
+                    self.difficulty.setCurrentText(difficulty)
                 self.started_at = time.monotonic()
                 return
             except (OSError, ValueError, KeyError, TypeError):
@@ -358,6 +467,7 @@ class SudokuWindow(QMainWindow):
 
     def _new_game(self):
         self.grid, self.solution = generate(self.difficulty.currentText())
+        self.difficulty_name = self.difficulty.currentText()
         self.givens = [row[:] for row in self.grid]
         self.notes = [[set() for _ in range(9)] for _ in range(9)]
         self.history.clear()
@@ -365,6 +475,8 @@ class SudokuWindow(QMainWindow):
         self.notes_mode = False
         self.elapsed = 0
         self.started_at = time.monotonic()
+        if hasattr(self, "timer"):
+            self.timer.start(1000)
         self.selected = next(
             (
                 (r, c)
@@ -431,20 +543,31 @@ class SudokuWindow(QMainWindow):
     def _enter(self, value):
         row, column = self.selected
         if self.givens[row][column]:
+            self._render()
             return
         if self.notes_mode:
+            self.history.append(
+                {
+                    "type": "cell",
+                    "row": row,
+                    "column": column,
+                    "value": self.grid[row][column],
+                    "notes": self.notes[row][column].copy(),
+                }
+            )
             if value in self.notes[row][column]:
                 self.notes[row][column].remove(value)
             else:
                 self.notes[row][column].add(value)
         else:
             self.history.append(
-                (
-                    row,
-                    column,
-                    self.grid[row][column],
-                    self.notes[row][column].copy(),
-                )
+                {
+                    "type": "cell",
+                    "row": row,
+                    "column": column,
+                    "value": self.grid[row][column],
+                    "notes": self.notes[row][column].copy(),
+                }
             )
             self.grid[row][column] = value
             self.notes[row][column].clear()
@@ -459,6 +582,13 @@ class SudokuWindow(QMainWindow):
                 )
             else:
                 self.status_label.setText("A good next step.")
+        if self.grid == self.solution:
+            self.elapsed += int(time.monotonic() - self.started_at)
+            self.started_at = time.monotonic()
+            self.timer.stop()
+        elif not self.timer.isActive():
+            self.started_at = time.monotonic()
+            self.timer.start(1000)
         self._save()
         self._render()
 
@@ -466,26 +596,77 @@ class SudokuWindow(QMainWindow):
         row, column = self.selected
         if not self.givens[row][column]:
             self.history.append(
-                (
-                    row,
-                    column,
-                    self.grid[row][column],
-                    self.notes[row][column].copy(),
-                )
+                {
+                    "type": "cell",
+                    "row": row,
+                    "column": column,
+                    "value": self.grid[row][column],
+                    "notes": self.notes[row][column].copy(),
+                }
             )
             self.grid[row][column] = 0
             self.notes[row][column].clear()
+            if self.grid != self.solution and not self.timer.isActive():
+                self.started_at = time.monotonic()
+                self.timer.start(1000)
             self._save()
             self._render()
 
     def _undo(self):
-        if self.history:
-            row, column, value, notes = self.history.pop()
-            self.grid[row][column] = value
-            self.notes[row][column] = notes
+        if not self.history:
+            return
+        action = self.history.pop()
+        if action["type"] == "board":
+            self.grid = [row[:] for row in action["grid"]]
+            self.notes = [
+                [notes.copy() for notes in row] for row in action["notes"]
+            ]
+            self.started_at = time.monotonic()
+            self.timer.start(1000)
+        else:
+            row, column = action["row"], action["column"]
+            self.grid[row][column] = action["value"]
+            self.notes[row][column] = action["notes"].copy()
             self.selected = (row, column)
-            self._save()
-            self._render()
+            if self.grid != self.solution and not self.timer.isActive():
+                self.started_at = time.monotonic()
+                self.timer.start(1000)
+        self.status_label.setText("Last move undone.")
+        self._save()
+        self._render()
+
+    def _solve_game(self):
+        """Fill the board with its solution as one undoable action."""
+        if self.grid == self.solution:
+            self.status_label.setText("This puzzle is already solved.")
+            return
+        self.history.append(
+            {
+                "type": "board",
+                "grid": [row[:] for row in self.grid],
+                "notes": [
+                    [notes.copy() for notes in row] for row in self.notes
+                ],
+            }
+        )
+        self.grid = [row[:] for row in self.solution]
+        self.notes = [[set() for _ in range(9)] for _ in range(9)]
+        self.armed_digit = None
+        self.notes_mode = False
+        self.elapsed += int(time.monotonic() - self.started_at)
+        self.started_at = time.monotonic()
+        self.timer.stop()
+        self.status_label.setText("Solved. Use Undo to restore your board.")
+        self._save()
+        self._render()
+        for row in range(9):
+            for column in range(9):
+                if not self.givens[row][column]:
+                    delay = (row * 9 + column) * 8
+                    QTimer.singleShot(
+                        delay,
+                        lambda r=row, c=column: self._animate_cell(r, c),
+                    )
 
     def _hint(self):
         row, column = self.selected
@@ -510,6 +691,9 @@ class SudokuWindow(QMainWindow):
         )
 
     def _tick(self):
+        if self.grid == self.solution:
+            self.timer.stop()
+            return
         seconds = self.elapsed + int(time.monotonic() - self.started_at)
         self.time_label.setText(f"{seconds // 60:02d}:{seconds % 60:02d}")
         self._save()
@@ -517,11 +701,17 @@ class SudokuWindow(QMainWindow):
     def _save(self):
         if not hasattr(self, "grid"):
             return
+        elapsed = self.elapsed
+        if self.grid != self.solution:
+            elapsed += int(time.monotonic() - self.started_at)
         state = {
             "grid": self.grid,
             "givens": self.givens,
             "solution": self.solution,
-            "elapsed": self.elapsed + int(time.monotonic() - self.started_at),
+            "difficulty": getattr(self, "difficulty_name", "medium"),
+            "notes": [[sorted(values) for values in row] for row in self.notes],
+            "selected": list(self.selected),
+            "elapsed": elapsed,
         }
         try:
             _STATE_PATH.write_text(json.dumps(state), encoding="utf-8")
@@ -531,7 +721,7 @@ class SudokuWindow(QMainWindow):
     def _render(self):
         row, column = self.selected
         selected_value = self.grid[row][column]
-        has_error = not is_valid(self.grid)
+        conflicts = self._conflicting_cells()
         for r in range(9):
             for c in range(9):
                 button = self.cells[r][c]
@@ -554,13 +744,38 @@ class SudokuWindow(QMainWindow):
                 button.setProperty(
                     "same", bool(selected_value and value == selected_value)
                 )
-                button.setProperty("error", bool(value and has_error))
+                button.setProperty("error", (r, c) in conflicts)
                 button.style().unpolish(button)
                 button.style().polish(button)
         for value, button in enumerate(self.number_buttons, start=1):
             button.setProperty("armed", value == self.armed_digit)
             button.style().unpolish(button)
             button.style().polish(button)
+
+    def _conflicting_cells(self):
+        """Return only cells participating in row, column, or box conflicts."""
+        conflicts = set()
+        for row in range(9):
+            for column in range(9):
+                value = self.grid[row][column]
+                if not value:
+                    continue
+                for other_column in range(column + 1, 9):
+                    if self.grid[row][other_column] == value:
+                        conflicts.update({(row, column), (row, other_column)})
+                for other_row in range(row + 1, 9):
+                    if self.grid[other_row][column] == value:
+                        conflicts.update({(row, column), (other_row, column)})
+                box_row, box_column = row // 3 * 3, column // 3 * 3
+                for other_row in range(box_row, box_row + 3):
+                    for other_column in range(box_column, box_column + 3):
+                        if (other_row, other_column) <= (row, column):
+                            continue
+                        if self.grid[other_row][other_column] == value:
+                            conflicts.update(
+                                {(row, column), (other_row, other_column)}
+                            )
+        return conflicts
 
     def keyPressEvent(self, event: QKeyEvent):
         """Handle digit entry, selection movement, and game shortcuts."""
@@ -582,6 +797,8 @@ class SudokuWindow(QMainWindow):
             self._erase()
         elif key == Qt.Key.Key_N:
             self._toggle_notes()
+        elif key == Qt.Key.Key_S:
+            self._solve_game()
         elif key == Qt.Key.Key_Escape and self.armed_digit:
             self.armed_digit = None
             self._render()

@@ -50,6 +50,8 @@ workflow publishes the contents of `web/` on each relevant push.
 | Toggle pencil notes | `N` or Notes button |
 | Undo | `Ctrl+Z` or Undo button |
 | Get a hint | Hint button |
+| Reveal the full solution | Solve button or `S` |
+| Undo the one-click solution | Undo button or `Ctrl+Z` |
 | Quick place several matching digits | Choose a number, then click multiple cells |
 | Clear the active quick-place number | `Esc` |
 

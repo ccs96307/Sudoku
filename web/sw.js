@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_NAME = 'still-sudoku-v2';
+const CACHE_NAME = 'still-sudoku-v3';
 const APP_SHELL = ['./', './index.html', './styles.css', './app.js', './manifest.webmanifest', './favicon.svg'];
 
 self.addEventListener('install', (event) => {

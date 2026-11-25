@@ -36,6 +36,9 @@ let toastTimeout;
 let armedDigit = null;
 let preferences = {theme: 'midnight-garden', rapidEntry: true};
 let celebrationShown = false;
+let originalTheme = preferences.theme;
+let pendingTheme = preferences.theme;
+let timerHandle;
 
 function cloneGrid(grid) { return grid.map((row) => row.slice()); }
 function cellPeers(index) {
@@ -53,7 +56,13 @@ function optionsAt(grid, index) {
   const used = new Set(peers.map((peer) => grid[Math.floor(peer / 9)][peer % 9]));
   return [1, 2, 3, 4, 5, 6, 7, 8, 9].filter((value) => !used.has(value));
 }
+function hasGridShape(grid) {
+  return Array.isArray(grid) && grid.length === 9 &&
+    grid.every((row) => Array.isArray(row) && row.length === 9 &&
+      row.every((value) => Number.isInteger(value) && value >= 0 && value <= 9));
+}
 function valid(grid) {
+  if (!hasGridShape(grid)) return false;
   for (let index = 0; index < 81; index++) {
     const value = grid[Math.floor(index / 9)][index % 9];
     if (!value) continue;
@@ -126,6 +135,14 @@ function buildBoard() {
     button.setAttribute('aria-label', `Choose ${value}`); button.addEventListener('click', () => chooseNumber(value)); numberPad.append(button);
   }
 }
+function matchesPuzzle(givens, solution) {
+  return givens.every((row, r) => row.every((value, c) =>
+    !value || value === solution[r][c]));
+}
+function isSolved() {
+  return state.grid.length === 9 && state.grid.flat().every(
+    (value, index) => value === state.solution[Math.floor(index / 9)][index % 9]);
+}
 function render(popIndex = -1) {
   const selectedValue = state.grid[Math.floor(state.selected / 9)][state.selected % 9];
   const buttons = [...boardElement.children]; const filled = state.grid.flat().filter(Boolean).length;
@@ -157,9 +174,10 @@ function save() {
 function newGame() {
   const {puzzle, solution} = makePuzzle($('#difficulty').value);
   celebrationShown = false; armedDigit = null;
-  state.grid = puzzle; state.givens = cloneGrid(puzzle); state.solution = solution; state.selected = puzzle.flat().findIndex((value) => !value);
+  state.grid = puzzle; state.givens = cloneGrid(puzzle); state.solution = solution; state.difficulty = $('#difficulty').value; state.selected = puzzle.flat().findIndex((value) => !value);
   state.notes = Array.from({length: 81}, () => new Set()); state.history = []; state.noteMode = false; state.seconds = 0; state.startedAt = Date.now();
-  statusElement.textContent = 'A fresh page. Take your time.'; $('#notes').classList.remove('active');
+  $('#notes').classList.remove('active');
+  statusElement.textContent = 'A fresh page. Take your time.';
   save(); render(); animateReveal();
   boardElement.animate([{opacity:.35,transform:'scale(.985)'},{opacity:1,transform:'scale(1)'}], {duration:520,easing:'cubic-bezier(.2,.7,.2,1)'});
 }
@@ -187,13 +205,14 @@ function enter(value, index = state.selected) {
   const row = Math.floor(index / 9), col = index % 9;
   if (state.givens[row][col]) { render(); return; }
   if (state.noteMode) {
+    state.history.push({type: 'cell', index, value: state.grid[row][col], notes: [...state.notes[index]]});
     if (state.notes[index].has(value)) state.notes[index].delete(value); else state.notes[index].add(value);
   } else {
-    state.history.push({index, value: state.grid[row][col], notes: [...state.notes[index]]});
+    state.history.push({type: 'cell', index, value: state.grid[row][col], notes: [...state.notes[index]]});
     state.grid[row][col] = value; state.notes[index].clear();
     const button = boardElement.children[index]; button.animate([{transform:'scale(.8)',opacity:.5},{transform:'scale(1)',opacity:1}],{duration:250,easing:'cubic-bezier(.2,.9,.3,1.4)'});
     if (!valid(state.grid)) { statusElement.textContent = 'That number conflicts with this row, column, or box.'; button.classList.add('conflict'); }
-    else if (state.grid.flat().every((digit, i) => digit === state.solution[Math.floor(i / 9)][i % 9])) { statusElement.textContent = 'Beautifully done. You made space for clarity.'; showToast('Puzzle complete · beautifully done'); celebrate(); }
+    else if (isSolved()) { pauseClock(); statusElement.textContent = 'Beautifully done. You made space for clarity.'; showToast('Puzzle complete · beautifully done'); celebrate(); }
     else statusElement.textContent = 'A good next step.';
   }
   save(); render(index);
@@ -203,7 +222,7 @@ function celebrate() {
   celebrationShown = true;
   const layer = $('#celebration');
   const palette = THEMES.find((theme) => theme[0] === preferences.theme) || THEMES[0];
-  const colors = [palette[6], palette[9], '#ffffff', palette[5]];
+  const colors = [palette[8], palette[11], '#ffffff', palette[7]];
   for (let index = 0; index < 54; index++) {
     const piece = document.createElement('i'); piece.className = 'confetti';
     piece.style.setProperty('--x', `${Math.random() * 100}%`);
@@ -219,12 +238,50 @@ function celebrate() {
 function erase() {
   const index = state.selected, row = Math.floor(index / 9), col = index % 9;
   if (state.givens[row][col]) return;
-  state.history.push({index, value: state.grid[row][col], notes: [...state.notes[index]]}); state.grid[row][col] = 0; state.notes[index].clear(); save(); render();
+  state.history.push({type: 'cell', index, value: state.grid[row][col], notes: [...state.notes[index]]});
+  state.grid[row][col] = 0; state.notes[index].clear(); save(); render();
 }
 function undo() {
   const previous = state.history.pop(); if (!previous) return;
-  const row = Math.floor(previous.index / 9), col = previous.index % 9;
-  state.grid[row][col] = previous.value; state.notes[previous.index] = new Set(previous.notes); state.selected = previous.index; save(); render();
+  if (previous.type === 'board') {
+    state.grid = cloneGrid(previous.grid);
+    state.notes = previous.notes.map((items) => items.slice());
+  } else {
+    const row = Math.floor(previous.index / 9), col = previous.index % 9;
+    state.grid[row][col] = previous.value;
+    state.notes[previous.index] = new Set(previous.notes);
+    state.selected = previous.index;
+  }
+  if (!isSolved()) state.startedAt = Date.now() - state.seconds * 1000;
+  statusElement.textContent = 'Last move undone.';
+  save(); render();
+}
+function pauseClock() {
+  state.seconds = Math.max(0, Math.floor((Date.now() - state.startedAt) / 1000));
+  state.startedAt = Date.now() - state.seconds * 1000;
+  timerElement.textContent = `${String(Math.floor(state.seconds / 60)).padStart(2,'0')}:${String(state.seconds % 60).padStart(2,'0')}`;
+}
+function solvePuzzle() {
+  if (isSolved()) { statusElement.textContent = 'This puzzle is already solved.'; return; }
+  state.history.push({
+    type: 'board',
+    grid: cloneGrid(state.grid),
+    notes: state.notes.map((items) => [...items]),
+  });
+  pauseClock();
+  state.grid = cloneGrid(state.solution);
+  state.notes = Array.from({length: 81}, () => new Set());
+  state.noteMode = false; armedDigit = null;
+  $('#notes').classList.remove('active');
+  statusElement.textContent = 'Solved. Use Undo to restore your board.';
+  save(); render();
+  [...boardElement.children].forEach((cell, index) => {
+    const row = Math.floor(index / 9), col = index % 9;
+    if (state.givens[row][col]) return;
+    cell.style.setProperty('--delay', `${index * 9}ms`);
+    cell.classList.add('solved-fill');
+  });
+  showToast('Solution revealed');
 }
 function hint() {
   if (state.grid[Math.floor(state.selected / 9)][state.selected % 9]) {
@@ -243,9 +300,18 @@ function showToast(message) {
 function load() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if (saved && saved.grid?.length === 9 && saved.solution?.length === 9) {
-      Object.assign(state, saved); state.notes = (saved.notes || []).map((items) => new Set(items));
-      while (state.notes.length < 81) state.notes.push(new Set()); state.history = []; state.startedAt = Date.now(); return;
+    if (saved && hasGridShape(saved.grid) && hasGridShape(saved.givens) &&
+        hasGridShape(saved.solution) && saved.solution.flat().every(Boolean) &&
+        valid(saved.solution) && valid(saved.givens) && matchesPuzzle(saved.givens, saved.solution)) {
+      Object.assign(state, saved); state.notes = Array.from({length: 81}, (_, index) =>
+        new Set(Array.isArray(saved.notes?.[index]) ? saved.notes[index].filter((value) => Number.isInteger(value) && value >= 1 && value <= 9) : []));
+      state.history = [];
+      if (!Number.isInteger(state.selected) || state.selected < 0 || state.selected >= 81) state.selected = 0;
+      if (!['easy','medium','hard','expert'].includes(state.difficulty)) state.difficulty = 'medium';
+      $('#difficulty').value = state.difficulty;
+      state.seconds = Math.max(0, Number(state.seconds) || 0);
+      state.startedAt = Date.now() - state.seconds * 1000;
+      return;
     }
   } catch (_) { /* Start a clean game when stored data is incomplete. */ }
   newGame();
@@ -254,45 +320,104 @@ $('#new-game').addEventListener('click', newGame);
 $('#undo').addEventListener('click', undo);
 $('#erase').addEventListener('click', erase);
 $('#hint').addEventListener('click', hint);
+$('#solve').addEventListener('click', solvePuzzle);
 $('#notes').addEventListener('click', () => { state.noteMode = !state.noteMode; $('#notes').classList.toggle('active', state.noteMode); statusElement.textContent = state.noteMode ? 'Pencil notes on.' : 'Pencil notes off.'; });
 function applyTheme(themeId) {
   const theme = THEMES.find((item) => item[0] === themeId) || THEMES[0];
-  preferences.theme = theme[0];
   const vars = ['--bg','--panel','--panel2','--line','--text','--muted','--accent','--accent-ink','--given','--entry','--selected','--related','--same','--error','--error-bg'];
   vars.forEach((name, index) => document.documentElement.style.setProperty(name, theme[index + 2]));
-  document.documentElement.style.colorScheme = ['paper-ink','cherry-blossom','desert-sand','jade-palace','violet-hour','glacier-blue'].includes(themeId) ? 'light' : 'dark';
-  preferences.theme = themeId;
+  const lightThemes = ['paper-ink','cherry-blossom','desert-sand','jade-palace','violet-hour','glacier-blue'];
+  document.documentElement.style.colorScheme = lightThemes.includes(theme[0]) ? 'light' : 'dark';
+  renderThemePreview(theme);
+}
+function renderThemePreview(theme) {
+  if (!theme) return;
+  const previewName = $('#theme-preview-name');
+  const previewBoard = $('#theme-preview');
+  if (!previewName || !previewBoard) return;
+  previewName.textContent = theme[1];
+  previewBoard.replaceChildren();
+  const sample = [
+    ['5', 'preview-given'], ['', 'preview-related'], ['8', 'preview-entry'],
+    ['2', 'preview-given'], ['4', 'preview-focus'], ['7', 'preview-related'],
+    ['1', 'preview-entry'], ['9', 'preview-given'], ['', 'preview-entry'],
+  ];
+  sample.forEach(([digit, className]) => {
+    const cell = document.createElement('span');
+    cell.className = className; cell.textContent = digit; previewBoard.append(cell);
+  });
+}
+function buildThemePicker() {
+  const picker = $('#theme-picker');
+  picker.replaceChildren();
+  THEMES.forEach((theme) => {
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'palette-card';
+    button.setAttribute('role', 'option'); button.dataset.theme = theme[0];
+    button.setAttribute('aria-label', theme[1]);
+    const swatches = document.createElement('span'); swatches.className = 'palette-swatches';
+    [theme[8], theme[2], theme[10], theme[11]].forEach((color) => {
+      const dot = document.createElement('i'); dot.style.backgroundColor = color; swatches.append(dot);
+    });
+    const name = document.createElement('span'); name.textContent = theme[1];
+    button.append(swatches, name);
+    button.addEventListener('click', () => {
+      pendingTheme = theme[0]; applyTheme(pendingTheme); updateThemeSelection();
+    });
+    picker.append(button);
+  });
+  updateThemeSelection();
+}
+function updateThemeSelection() {
+  document.querySelectorAll('.palette-card').forEach((button) => {
+    button.setAttribute('aria-selected', String(button.dataset.theme === pendingTheme));
+  });
 }
 function savePreferences() {
   try { localStorage.setItem(PREFERENCES_KEY, JSON.stringify(preferences)); } catch (_) { /* Preferences are optional. */ }
 }
 function openSettings() {
-  $('#palette-select').value = preferences.theme;
+  originalTheme = preferences.theme;
+  pendingTheme = preferences.theme;
   $('#rapid-entry').checked = preferences.rapidEntry;
+  applyTheme(pendingTheme); updateThemeSelection();
   $('#settings-dialog').showModal();
 }
 $('#settings-button').addEventListener('click', openSettings);
 $('#settings-dialog').addEventListener('close', () => {
-  if ($('#settings-dialog').returnValue !== 'save') return;
-  preferences.theme = $('#palette-select').value;
-  preferences.rapidEntry = $('#rapid-entry').checked;
-  armedDigit = null; applyTheme(preferences.theme); savePreferences(); render();
-  statusElement.textContent = 'Settings saved.';
+  if ($('#settings-dialog').returnValue === 'confirm') {
+    preferences.theme = pendingTheme;
+    preferences.rapidEntry = $('#rapid-entry').checked;
+    armedDigit = null; savePreferences(); render();
+    statusElement.textContent = 'Settings saved.';
+  } else {
+    pendingTheme = originalTheme;
+    applyTheme(originalTheme); render();
+  }
 });
 window.addEventListener('keydown', (event) => {
-  const direction = {ArrowUp: -9, ArrowDown: 9, ArrowLeft: -1, ArrowRight: 1};
-  if (event.key in direction) { event.preventDefault(); state.selected = (state.selected + direction[event.key] + 81) % 81; render(); }
+  if (event.target instanceof HTMLElement &&
+      (event.target.closest('dialog') ||
+       ['INPUT', 'SELECT', 'TEXTAREA'].includes(event.target.tagName))) return;
+  const row = Math.floor(state.selected / 9), col = state.selected % 9;
+  if (event.key === 'ArrowUp') { event.preventDefault(); state.selected = ((row + 8) % 9) * 9 + col; render(); }
+  else if (event.key === 'ArrowDown') { event.preventDefault(); state.selected = ((row + 1) % 9) * 9 + col; render(); }
+  else if (event.key === 'ArrowLeft') { event.preventDefault(); state.selected = row * 9 + (col + 8) % 9; render(); }
+  else if (event.key === 'ArrowRight') { event.preventDefault(); state.selected = row * 9 + (col + 1) % 9; render(); }
   else if (/^[1-9]$/.test(event.key)) enter(Number(event.key));
   else if (event.key === 'Escape') { armedDigit = null; render(); }
   else if (event.key === '0' || event.key === 'Backspace' || event.key === 'Delete') erase();
   else if (event.key.toLowerCase() === 'n') { state.noteMode = !state.noteMode; $('#notes').classList.toggle('active', state.noteMode); }
+  else if (event.key.toLowerCase() === 's') solvePuzzle();
   else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') undo();
 });
-setInterval(() => { state.seconds = Math.max(0, Math.floor((Date.now() - state.startedAt) / 1000)); timerElement.textContent = `${String(Math.floor(state.seconds / 60)).padStart(2,'0')}:${String(state.seconds % 60).padStart(2,'0')}`; save(); }, 1000);
+timerHandle = setInterval(() => { if (!isSolved()) state.seconds = Math.max(0, Math.floor((Date.now() - state.startedAt) / 1000)); timerElement.textContent = `${String(Math.floor(state.seconds / 60)).padStart(2,'0')}:${String(state.seconds % 60).padStart(2,'0')}`; save(); }, 1000);
 buildBoard();
-const paletteSelect = $('#palette-select');
-THEMES.forEach(([id, name]) => { const option = document.createElement('option'); option.value = id; option.textContent = name; paletteSelect.append(option); });
+buildThemePicker();
 try { preferences = {...preferences, ...JSON.parse(localStorage.getItem(PREFERENCES_KEY) || '{}')}; } catch (_) { /* Use the defaults. */ }
+if (!THEMES.some((theme) => theme[0] === preferences.theme)) preferences.theme = THEMES[0][0];
+preferences.rapidEntry = preferences.rapidEntry !== false;
+pendingTheme = preferences.theme;
 applyTheme(preferences.theme); $('#rapid-entry').checked = preferences.rapidEntry;
 load(); render(); animateReveal();
 
