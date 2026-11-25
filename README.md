@@ -30,6 +30,14 @@ To publish with GitHub Pages, merge the project into `main` or `master`, then
 in the repository settings choose **Pages → GitHub Actions**. The included
 workflow publishes the contents of `web/` on each relevant push.
 
+## Flutter app
+
+The `flutter_app/` directory contains a cross-platform Flutter edition with
+the same 20 previewable palettes, quick number-first placement, notes, undo,
+hints, one-tap solving, animated puzzle generation, and local save/restore.
+See [`flutter_app/README.md`](flutter_app/README.md) for setup and platform
+commands. It can target Android, iOS, desktop, and Flutter Web.
+
 ## Structure
 
 - `sudoku/engine.py` — validation, candidate lookup, backtracking solver, and
@@ -38,6 +46,7 @@ workflow publishes the contents of `web/` on each relevant push.
 - `main.py` — desktop entry point.
 - `web/` — self-contained static web application.
 - `.github/workflows/pages.yml` — GitHub Pages deployment.
+- `flutter_app/` — Flutter game, shared Sudoku engine, themes, and tests.
 
 ## Controls
 
