@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101918">
+  <meta name="description" content="A quiet, beautifully crafted Sudoku for a clearer mind.">
+  <title>Sudoku — A little clarity</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
+  <main class="app-shell">
+    <header class="masthead">
+      <a class="brand" href="#" aria-label="Sudoku home"><span class="brand-mark">✳</span> STILL / 09</a>
+      <button class="icon-button" id="theme-button" aria-label="Switch color theme" title="Switch color theme">◐</button>
+    </header>
+    <section class="intro">
+      <p class="eyebrow"><span class="live-dot"></span> DAILY RITUAL · NO RUSH</p>
+      <h1>A little<br><em>clarity.</em></h1>
+      <p class="lede">One quiet square at a time.</p>
+    </section>
+    <section class="game" aria-label="Sudoku game">
+      <div class="game-bar">
+        <label class="visually-hidden" for="difficulty">Difficulty</label>
+        <select id="difficulty" aria-label="Puzzle difficulty">
+          <option value="easy">Easy</option><option value="medium" selected>Medium</option>
+          <option value="hard">Hard</option><option value="expert">Expert</option>
+        </select>
+        <button class="new-game" id="new-game">New puzzle <span>↗</span></button>
+        <div class="timer" id="timer" aria-label="Elapsed time">00:00</div>
+      </div>
+      <div id="board" class="board" role="grid" aria-label="Sudoku board"></div>
+      <div class="status" id="status" role="status" aria-live="polite">A fresh page. Take your time.</div>
+      <div class="number-pad" id="number-pad" aria-label="Enter a number"></div>
+      <div class="actions">
+        <button id="undo">↶ <span>Undo</span></button>
+        <button id="notes">✎ <span>Notes</span></button>
+        <button id="hint">✧ <span>Hint</span></button>
+        <button id="erase">⌫ <span>Erase</span></button>
+      </div>
+      <div class="progress-row"><span id="progress-label">0 / 81 filled</span><div class="progress-track"><span id="progress"></span></div></div>
+    </section>
+    <footer><span>MADE FOR A MOMENT OF CALM</span><span>ARROWS TO MOVE · 1–9 TO FILL · N FOR NOTES</span></footer>
+  </main>
+  <div class="toast" id="toast" role="status"></div>
+  <script src="app.js"></script>
+</body>
+</html>
