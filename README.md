@@ -22,8 +22,8 @@ in `~/.beautiful-sudoku.json`.
 Open `web/index.html` directly, or serve the `web/` directory with any static
 HTTP server. No build step, package manager, or server API is required. The
 browser edition includes responsive layouts, light and dark themes, keyboard
-controls, pencil notes, undo, hints, progress tracking, and automatic
-`localStorage` saves.
+controls, pencil notes, undo, hints, progress tracking, a service-worker app
+shell for repeat offline visits, and automatic `localStorage` saves.
 
 To publish with GitHub Pages, merge the project into `main` or `master`, then
 in the repository settings choose **Pages → GitHub Actions**. The included
@@ -57,3 +57,14 @@ stay on the current device. The generator shuffles a solved grid and removes
 clues only while the puzzle retains exactly one solution. Difficulty labels
 set clue-count targets (40, 34, 29, and 25); actual human solving difficulty
 also depends on the puzzle's logical techniques, so the labels are approximate.
+
+
+## Further improvement ideas
+
+The core game and both clients are intentionally framework-light. Strong next
+steps include logical-technique difficulty rating (instead of clue-count labels),
+a daily seeded puzzle, accessible screen-reader announcements for conflicts,
+a focused test suite for generator uniqueness and UI interactions, and desktop
+release bundles for Windows, macOS, and Linux. The current puzzle generator
+checks uniqueness but does not rate human solving techniques, and the desktop
+app currently saves one in-progress game per device.

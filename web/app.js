@@ -192,3 +192,7 @@ setInterval(() => { state.seconds = Math.max(0, Math.floor((Date.now() - state.s
 buildBoard();
 if (localStorage.getItem('still-sudoku-theme') === 'light') document.body.classList.add('light');
 load(); render();
+
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+}
