@@ -7,24 +7,24 @@ are checked for a unique solution.
 ## Desktop app
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate  # Windows: .venv\\Scripts\\activate
-python -m pip install -r requirements.txt
-python main.py
+uv sync
+uv run python main.py
 ```
 
-The desktop app includes four difficulty targets, keyboard navigation, pencil
-notes, undo, hints, conflict highlighting, a timer, and automatic local saves
-in `~/.beautiful-sudoku.json`.
+`uv sync` creates the project environment and installs PySide6. The desktop app
+includes four difficulty targets, rapid number-first placement, keyboard
+navigation, pencil notes, undo, hints, conflict highlighting, a timer, 20 color
+palettes, and automatic local saves in `~/.beautiful-sudoku.json`.
 
 ## Web app
 
 Open `web/index.html` directly, or serve the `web/` directory with a static
 HTTP server. For example, run `uv run python -m http.server 8000 --directory web`
-and visit `http://localhost:8000`. No web build step or server API is required. The
-browser edition includes responsive layouts, light and dark themes, keyboard
-controls, pencil notes, undo, hints, progress tracking, a service-worker app
-shell for repeat offline visits, and automatic `localStorage` saves.
+and visit `http://localhost:8000`. No web build step or server API is required.
+The browser edition includes responsive layouts, 20 configurable color
+palettes, quick number-first entry, keyboard controls, pencil notes, undo,
+hints, progress tracking, animated feedback, a service-worker app shell for
+repeat offline visits, and automatic `localStorage` saves.
 
 To publish with GitHub Pages, merge the project into `main` or `master`, then
 in the repository settings choose **Pages → GitHub Actions**. The included
@@ -50,6 +50,8 @@ workflow publishes the contents of `web/` on each relevant push.
 | Toggle pencil notes | `N` or Notes button |
 | Undo | `Ctrl+Z` or Undo button |
 | Get a hint | Hint button |
+| Quick place several matching digits | Choose a number, then click multiple cells |
+| Clear the active quick-place number | `Esc` |
 
 ## Design notes
 

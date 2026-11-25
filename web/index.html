@@ -15,7 +15,7 @@
   <main class="app-shell">
     <header class="masthead">
       <a class="brand" href="#" aria-label="Sudoku home"><span class="brand-mark">✳</span> STILL / 09</a>
-      <button class="icon-button" id="theme-button" aria-label="Switch color theme" title="Switch color theme">◐</button>
+      <button class="icon-button" id="settings-button" aria-label="Open settings" title="Settings">⚙</button>
     </header>
     <section class="intro">
       <p class="eyebrow"><span class="live-dot"></span> DAILY RITUAL · NO RUSH</p>
@@ -32,9 +32,11 @@
         <button class="new-game" id="new-game">New puzzle <span>↗</span></button>
         <div class="timer" id="timer" aria-label="Elapsed time">00:00</div>
       </div>
+      <div class="board-legend" aria-label="Number colors"><span><i class="legend-given">8</i> PUZZLE</span><span><i class="legend-entry">8</i> YOURS</span></div>
       <div id="board" class="board" role="grid" aria-label="Sudoku board"></div>
       <div class="status" id="status" role="status" aria-live="polite">A fresh page. Take your time.</div>
-      <div class="number-pad" id="number-pad" aria-label="Enter a number"></div>
+      <p class="entry-help" id="entry-help">Quick place: choose a number, then tap the squares to fill.</p>
+      <div class="number-pad" id="number-pad" aria-label="Choose a number to place"></div>
       <div class="actions">
         <button id="undo">↶ <span>Undo</span></button>
         <button id="notes">✎ <span>Notes</span></button>
@@ -45,7 +47,19 @@
     </section>
     <footer><span>MADE FOR A MOMENT OF CALM</span><span>ARROWS TO MOVE · 1–9 TO FILL · N FOR NOTES</span></footer>
   </main>
+  <dialog class="settings-dialog" id="settings-dialog" aria-labelledby="settings-title">
+    <form method="dialog" id="settings-form">
+      <div class="settings-heading"><p class="eyebrow">MAKE IT YOURS</p><button class="dialog-close" value="cancel" aria-label="Close settings">×</button></div>
+      <h2 id="settings-title">Your little corner.</h2>
+      <label class="setting-label" for="palette-select">Color palette</label>
+      <select id="palette-select" class="setting-select"></select>
+      <label class="setting-check"><input id="rapid-entry" type="checkbox"><span><strong>Quick place</strong><small>Choose a number, then tap multiple squares to place it.</small></span></label>
+      <p class="setting-caption">Your choices stay on this device.</p>
+      <button class="new-game settings-done" value="save">Done <span>✓</span></button>
+    </form>
+  </dialog>
   <div class="toast" id="toast" role="status"></div>
+  <div class="celebration" id="celebration" aria-hidden="true"></div>
   <script src="app.js"></script>
 </body>
 </html>
