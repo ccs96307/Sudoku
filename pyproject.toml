@@ -1,3 +1,14 @@
+[project]
+name = "still-sudoku"
+version = "1.0.0"
+description = "A quiet, polished Sudoku game for desktop and the web."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["PySide6>=6.7,<7"]
+
+[tool.uv]
+package = false
+
 [tool.ruff]
 line-length = 80
 target-version = "py310"

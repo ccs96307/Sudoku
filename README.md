@@ -19,8 +19,9 @@ in `~/.beautiful-sudoku.json`.
 
 ## Web app
 
-Open `web/index.html` directly, or serve the `web/` directory with any static
-HTTP server. No build step, package manager, or server API is required. The
+Open `web/index.html` directly, or serve the `web/` directory with a static
+HTTP server. For example, run `uv run python -m http.server 8000 --directory web`
+and visit `http://localhost:8000`. No web build step or server API is required. The
 browser edition includes responsive layouts, light and dark themes, keyboard
 controls, pencil notes, undo, hints, progress tracking, a service-worker app
 shell for repeat offline visits, and automatic `localStorage` saves.
