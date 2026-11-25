@@ -41,6 +41,7 @@ class SudokuWindow(QMainWindow):
     """Elegant, keyboard-friendly Sudoku game window."""
 
     def __init__(self):
+        """Initialize the window and restore the current game."""
         super().__init__()
         self.setWindowTitle("Sudoku — A little clarity")
         self.setMinimumSize(620, 820)
@@ -259,6 +260,7 @@ class SudokuWindow(QMainWindow):
                 button.style().polish(button)
 
     def keyPressEvent(self, event: QKeyEvent):
+        """Handle digit entry, selection movement, and game shortcuts."""
         key = event.key()
         row, column = self.selected
         directions = {Qt.Key.Key_Up: (-1, 0), Qt.Key.Key_Down: (1, 0),
