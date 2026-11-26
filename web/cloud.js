@@ -14,6 +14,7 @@ let lastSyncAt = 0;
 let authApi;
 let callable;
 let accountMode = 'signin';
+const tr = (key, values) => window.t ? window.t(key, values) : key;
 
 const accountDialog = document.querySelector('#account-dialog');
 const accountStatus = document.querySelector('#account-status');
@@ -23,29 +24,34 @@ const leaderboardDialog = document.querySelector('#leaderboard-dialog');
 
 function announceAuth(user) {
   currentUser = user;
-  if (accountButton) accountButton.textContent = user ? `Hi, ${user.displayName || user.email?.split('@')[0] || 'Player'}` : 'Sign in';
-  if (cloudStatus) cloudStatus.textContent = user ? `Signed in as ${user.displayName || user.email}` : (configured ? 'Playing as guest' : 'Cloud features need Firebase setup');
+  if (accountButton) accountButton.textContent = user ? `Hi, ${user.displayName || user.email?.split('@')[0] || 'Player'}` : tr('signIn');
+  if (cloudStatus) cloudStatus.textContent = user ? `${tr('signedInAs')} ${user.displayName || user.email}` : (configured ? tr('playingGuest') : tr('cloudSetupNeeded'));
   window.dispatchEvent(new CustomEvent('sudoku:auth-change', {detail: {user: user ? {uid: user.uid, displayName: user.displayName, email: user.email} : null}}));
 }
 
 function setAccountMode(mode) {
   accountMode = mode;
   const register = mode === 'register';
-  document.querySelector('#account-title').textContent = register ? 'Create your account' : 'Welcome back';
-  document.querySelector('#account-submit').textContent = register ? 'Create account' : 'Sign in';
-  document.querySelector('#account-mode-toggle').textContent = register ? 'I already have an account' : 'Create an account';
+  document.querySelector('#account-title').textContent = register ? tr('createYourAccount') : tr('welcome');
+  document.querySelector('#account-submit').textContent = register ? tr('createAccount') : tr('signIn');
+  document.querySelector('#account-mode-toggle').textContent = register ? tr('haveAccount') : tr('createAccount');
   document.querySelector('#display-name-field').hidden = !register;
   document.querySelector('#account-display-name').required = register;
 }
+window.addEventListener('sudoku:language-change', () => {
+  if (accountDialog) setAccountMode(accountMode);
+  if (window.SudokuCloud?.configured) announceAuth(currentUser);
+  else if (cloudStatus) cloudStatus.textContent = tr('cloudSetupNeeded');
+});
 
 async function initialize() {
   if (!configured) {
     accountButton?.addEventListener('click', () => {
-      accountStatus.textContent = 'Add your Firebase web app settings to web/firebase-config.js to enable cloud accounts.';
+      accountStatus.textContent = tr('firebaseConfigNeeded');
       document.querySelector('#account-login-fields').hidden = true;
       accountDialog.showModal();
     });
-    if (cloudStatus) cloudStatus.textContent = 'Guest mode · Firebase setup needed for online play';
+    if (cloudStatus) cloudStatus.textContent = tr('cloudSetupNeeded');
     window.SudokuCloud = {configured: false, signedIn: () => false};
     return;
   }
@@ -70,7 +76,7 @@ async function initialize() {
           if (saved?.game) window.dispatchEvent(new CustomEvent('sudoku:cloud-game', {detail: saved.game}));
           else window.dispatchEvent(new CustomEvent('sudoku:cloud-empty'));
         } catch (error) {
-          if (cloudStatus) cloudStatus.textContent = `Cloud sync unavailable: ${error.message}`;
+          if (cloudStatus) cloudStatus.textContent = tr('syncUnavailable', {error: error.message});
         }
       }
     });
@@ -115,18 +121,18 @@ async function initialize() {
             await callable('syncSavedGame', {game: gameToSave});
             lastSyncAt = Date.now();
             lastSyncSignature = signatureToSave;
-            if (cloudStatus) cloudStatus.textContent = 'Cloud save up to date';
+            if (cloudStatus) cloudStatus.textContent = tr('cloudUpToDate');
           } catch (error) {
-            if (cloudStatus) cloudStatus.textContent = `Cloud save failed: ${error.message}`;
+            if (cloudStatus) cloudStatus.textContent = tr('cloudSaveFailed', {error: error.message});
           }
         }, delay);
       },
     };
-    if (cloudStatus) cloudStatus.textContent = currentUser ? `Signed in as ${currentUser.displayName || currentUser.email}` : 'Firebase connected · playing as guest';
+    if (cloudStatus) cloudStatus.textContent = currentUser ? `${tr('signedInAs')} ${currentUser.displayName || currentUser.email}` : tr('playingGuest');
     accountButton?.addEventListener('click', () => {
       document.querySelector('#account-login-fields').hidden = Boolean(currentUser);
       if (currentUser) {
-        accountStatus.textContent = `Signed in as ${currentUser.displayName || currentUser.email}.`;
+        accountStatus.textContent = `${tr('signedInAs')} ${currentUser.displayName || currentUser.email}.`;
         document.querySelector('#account-signout').hidden = false;
       } else {
         accountStatus.textContent = '';
@@ -135,7 +141,7 @@ async function initialize() {
       accountDialog.showModal();
     });
   } catch (error) {
-    if (cloudStatus) cloudStatus.textContent = `Firebase setup error: ${error.message}`;
+    if (cloudStatus) cloudStatus.textContent = tr('firebaseSetupError', {error: error.message});
     window.SudokuCloud = {configured: false, signedIn: () => false};
   }
 }
@@ -151,7 +157,7 @@ accountDialog?.querySelector('#account-form').addEventListener('submit', async (
   const displayName = document.querySelector('#account-display-name').value.trim();
   const button = document.querySelector('#account-submit');
   button.disabled = true;
-  accountStatus.textContent = 'Connecting securely…';
+  accountStatus.textContent = tr('connecting');
   try {
     if (accountMode === 'register') await window.SudokuCloud.register(email, password, displayName);
     else await window.SudokuCloud.signIn(email, password);
@@ -176,12 +182,12 @@ document.querySelector('#account-signout')?.addEventListener('click', async () =
 });
 document.querySelector('#daily-challenge')?.addEventListener('click', async () => {
   if (!window.SudokuCloud?.configured) {
-    accountStatus.textContent = 'Connect Firebase and sign in to join the shared daily challenge.';
+    accountStatus.textContent = tr('firebaseConfigNeeded');
     accountDialog.showModal();
     return;
   }
   if (!window.SudokuCloud.signedIn()) {
-    accountStatus.textContent = 'Sign in to play the shared daily challenge and appear on its leaderboard.';
+    accountStatus.textContent = tr('loginRanking');
     accountDialog.showModal();
     return;
   }
@@ -201,22 +207,22 @@ document.querySelector('#leaderboard-button')?.addEventListener('click', async (
   const list = document.querySelector('#leaderboard-list');
   list.replaceChildren();
   if (!window.SudokuCloud?.configured || !window.SudokuCloud.signedIn()) {
-    document.querySelector('#leaderboard-note').textContent = 'Sign in to view the daily rankings.';
+    document.querySelector('#leaderboard-note').textContent = tr('leaderboardLogin');
     leaderboardDialog.showModal();
     return;
   }
-  document.querySelector('#leaderboard-note').textContent = 'Loading today’s rankings…';
+  document.querySelector('#leaderboard-note').textContent = tr('leaderboardLoading');
   leaderboardDialog.showModal();
   try {
     const data = await window.SudokuCloud.leaderboard();
-    document.querySelector('#leaderboard-note').textContent = `Daily board · ${data.date} · best time plus 2 minutes per hint`;
+    document.querySelector('#leaderboard-note').textContent = tr('leaderboardDescription', {date: data.date});
     for (const entry of data.entries) {
       const item = document.createElement('li');
       const name = document.createElement('span'); name.textContent = `${entry.rank}. ${entry.displayName}`;
       const score = document.createElement('strong'); score.textContent = `${Math.floor(entry.score / 60).toString().padStart(2, '0')}:${(entry.score % 60).toString().padStart(2, '0')}`;
       item.append(name, score); list.append(item);
     }
-    if (!data.entries.length) document.querySelector('#leaderboard-note').textContent = 'No ranked runs yet. Be the first.';
+    if (!data.entries.length) document.querySelector('#leaderboard-note').textContent = tr('leaderboardEmpty');
   } catch (error) {
     document.querySelector('#leaderboard-note').textContent = error.message;
   }

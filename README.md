@@ -1,8 +1,9 @@
 # Still Sudoku
 
-A quiet, polished Sudoku experience with a native PySide6 desktop app and a
-static web edition ready for GitHub Pages. Puzzles are generated locally and
-are checked for a unique solution.
+A quiet, polished Sudoku experience. The web edition is the primary maintained
+version and is ready for GitHub Pages. The PySide6 desktop edition is paused
+while web development is the focus. Puzzles are generated locally and checked
+for a unique solution.
 
 ## Desktop app
 
@@ -28,6 +29,9 @@ repeat offline visits, and automatic `localStorage` saves. Sign in to enable
 Firebase account sync, daily seeded challenges, and the server-validated daily
 leaderboard. The apps remain playable offline as guests. See
 [`firebase/README.md`](firebase/README.md) for setup and pricing.
+The interface is available in Traditional Chinese and English. Use the two
+separate **Solve** and **Challenge** pages to keep practice puzzles apart from
+the shared daily competition.
 
 To publish with GitHub Pages, merge the project into `main` or `master`, then
 in the repository settings choose **Pages → GitHub Actions**. The included

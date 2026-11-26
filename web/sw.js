@@ -1,7 +1,7 @@
 'use strict';
 
-const CACHE_NAME = 'still-sudoku-v4';
-const APP_SHELL = ['./', './index.html', './styles.css', './app.js', './cloud.js', './firebase-config.js', './manifest.webmanifest', './favicon.svg'];
+const CACHE_NAME = 'still-sudoku-v7';
+const APP_SHELL = ['./', './index.html', './styles.css', './app.js', './i18n.js', './cloud.js', './firebase-config.js', './manifest.webmanifest', './favicon.svg'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));

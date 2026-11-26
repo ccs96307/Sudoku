@@ -39,6 +39,37 @@ let celebrationShown = false;
 let originalTheme = preferences.theme;
 let pendingTheme = preferences.theme;
 let timerHandle;
+let activePage = 'solve';
+const translate = (key, values) => window.t ? window.t(key, values) : key;
+let statusMessage = ['fresh', {}];
+function setStatus(key, values = {}) {
+  statusMessage = [key, values];
+  statusElement.textContent = translate(key, values);
+}
+
+function setPage(page, {resetDaily = true} = {}) {
+  if (page === 'solve' && resetDaily && state.dailyChallengeDate) newGame();
+  activePage = page === 'challenge' ? 'challenge' : 'solve';
+  $('#solve-page').hidden = activePage !== 'solve';
+  $('#challenge-page').hidden = activePage !== 'challenge';
+  document.querySelectorAll('.page-tab').forEach((button) => {
+    const selected = button.dataset.page === activePage;
+    button.classList.toggle('active', selected);
+    button.setAttribute('aria-current', selected ? 'page' : 'false');
+  });
+  const host = activePage === 'challenge' && state.dailyChallengeDate
+    ? $('#challenge-game-host') : $('#solve-game-host');
+  host.append(document.querySelector('.game'));
+  const inChallenge = activePage === 'challenge' && Boolean(state.dailyChallengeDate);
+  $('#challenge-lobby').hidden = inChallenge;
+  $('#challenge-game-host').hidden = !inChallenge;
+  $('#difficulty').hidden = inChallenge;
+  $('#new-game').hidden = inChallenge;
+  $('#ritual-label').lastElementChild.textContent = inChallenge
+    ? translate('dailyLabel', {date: state.dailyChallengeDate})
+    : translate('ritualLabel');
+  window.location.hash = activePage === 'challenge' ? '#challenge' : '#solve';
+}
 
 function cloneGrid(grid) { return grid.map((row) => row.slice()); }
 function cellPeers(index) {
@@ -126,13 +157,13 @@ function buildBoard() {
   for (let index = 0; index < 81; index++) {
     const button = document.createElement('button');
     button.type = 'button'; button.className = 'cell'; button.setAttribute('role', 'gridcell');
-    button.setAttribute('aria-label', `Row ${Math.floor(index / 9) + 1}, column ${index % 9 + 1}`);
+    button.setAttribute('aria-label', translate('cellPosition', {row: Math.floor(index / 9) + 1, column: index % 9 + 1}));
     button.addEventListener('click', () => selectCell(index));
     boardElement.append(button);
   }
   for (let value = 1; value <= 9; value++) {
     const button = document.createElement('button'); button.type = 'button'; button.textContent = value;
-    button.setAttribute('aria-label', `Choose ${value}`); button.addEventListener('click', () => chooseNumber(value)); numberPad.append(button);
+    button.setAttribute('aria-label', translate('chooseNumber', {n: value})); button.addEventListener('click', () => chooseNumber(value)); numberPad.append(button);
   }
 }
 function matchesPuzzle(givens, solution) {
@@ -163,26 +194,27 @@ function render(popIndex = -1) {
     button.classList.toggle('armed', armedDigit === index + 1);
   });
   $('#entry-help').textContent = preferences.rapidEntry
-    ? (armedDigit ? `Tap squares to place ${armedDigit} · press Esc to clear.` : 'Quick place: choose a number, then tap multiple squares to fill.')
-    : 'Select a square, then choose a number to place it.';
-  $('#progress-label').textContent = `${filled} / 81 filled`;
+    ? (armedDigit ? translate('quickArmed', {n: armedDigit}) : translate('quickHelp'))
+    : translate('selectThenNumber');
+  $('#progress-label').textContent = translate('filled', {n: filled});
   $('#progress').style.width = `${filled / 81 * 100}%`;
 }
 function save() {
   state.savedAt = Date.now();
   const saved = {...state, theme: preferences.theme, rapidEntry: preferences.rapidEntry, notes: state.notes.map((notes) => [...notes]), history: []};
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(saved)); } catch (_) { showToast('Could not save this game on this device.'); }
-  window.SudokuCloud?.saveGame(saved);
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(saved)); } catch (_) { showToast(translate('saveError')); }
+  window.SudokuCloud?.saveGame?.(saved);
 }
 function newGame() {
+  setPage('solve', {resetDaily: false});
   const {puzzle, solution} = makePuzzle($('#difficulty').value);
   celebrationShown = false; armedDigit = null;
   state.grid = puzzle; state.givens = cloneGrid(puzzle); state.solution = solution; state.difficulty = $('#difficulty').value; state.selected = puzzle.flat().findIndex((value) => !value);
   state.notes = Array.from({length: 81}, () => new Set()); state.history = []; state.noteMode = false; state.seconds = 0; state.startedAt = Date.now();
   state.dailyChallengeDate = null; state.hintsUsed = 0; state.usedSolve = false;
-  $('#ritual-label').textContent = 'DAILY RITUAL · NO RUSH';
+  $('#ritual-label').lastElementChild.textContent = translate('ritualLabel');
   $('#notes').classList.remove('active');
-  statusElement.textContent = 'A fresh page. Take your time.';
+  setStatus('fresh');
   save(); render(); animateReveal();
   boardElement.animate([{opacity:.35,transform:'scale(.985)'},{opacity:1,transform:'scale(1)'}], {duration:520,easing:'cubic-bezier(.2,.7,.2,1)'});
 }
@@ -216,9 +248,9 @@ function enter(value, index = state.selected) {
     state.history.push({type: 'cell', index, value: state.grid[row][col], notes: [...state.notes[index]]});
     state.grid[row][col] = value; state.notes[index].clear();
     const button = boardElement.children[index]; button.animate([{transform:'scale(.8)',opacity:.5},{transform:'scale(1)',opacity:1}],{duration:250,easing:'cubic-bezier(.2,.9,.3,1.4)'});
-    if (!valid(state.grid)) { statusElement.textContent = 'That number conflicts with this row, column, or box.'; button.classList.add('conflict'); }
-    else if (isSolved()) { pauseClock(); statusElement.textContent = 'Beautifully done. You made space for clarity.'; showToast('Puzzle complete · beautifully done'); celebrate(); submitDailyResult(); }
-    else statusElement.textContent = 'A good next step.';
+    if (!valid(state.grid)) { setStatus('conflict'); button.classList.add('conflict'); }
+    else if (isSolved()) { pauseClock(); setStatus('complete'); showToast(translate('completeToast')); celebrate(); submitDailyResult(); }
+    else setStatus('nextStep');
   }
   save(); render(index);
 }
@@ -258,7 +290,7 @@ function undo() {
     state.selected = previous.index;
   }
   if (!isSolved()) state.startedAt = Date.now() - state.seconds * 1000;
-  statusElement.textContent = 'Last move undone.';
+  setStatus('undone');
   save(); render();
 }
 function pauseClock() {
@@ -267,10 +299,10 @@ function pauseClock() {
   timerElement.textContent = `${String(Math.floor(state.seconds / 60)).padStart(2,'0')}:${String(state.seconds % 60).padStart(2,'0')}`;
 }
 async function solvePuzzle() {
-  if (isSolved()) { statusElement.textContent = 'This puzzle is already solved.'; return; }
+  if (isSolved()) { setStatus('alreadySolved'); return; }
   if (state.dailyChallengeDate && !state.usedSolve) {
     try { await window.SudokuCloud?.recordDailyReveal(state.dailyChallengeDate); }
-    catch (error) { statusElement.textContent = `Could not record the solution reveal: ${error.message}`; }
+    catch (error) { setStatus('solutionRevealError', {error: error.message}); }
   }
   state.history.push({
     type: 'board',
@@ -283,7 +315,7 @@ async function solvePuzzle() {
   state.noteMode = false; armedDigit = null;
   if (state.dailyChallengeDate) state.usedSolve = true;
   $('#notes').classList.remove('active');
-  statusElement.textContent = 'Solved. Use Undo to restore your board.';
+  setStatus('solvedUndo');
   save(); render();
   [...boardElement.children].forEach((cell, index) => {
     const row = Math.floor(index / 9), col = index % 9;
@@ -291,7 +323,7 @@ async function solvePuzzle() {
     cell.style.setProperty('--delay', `${index * 9}ms`);
     cell.classList.add('solved-fill');
   });
-  showToast('Solution revealed');
+  showToast(translate('revealToast'));
 }
 async function hint() {
   if (state.grid[Math.floor(state.selected / 9)][state.selected % 9]) {
@@ -305,18 +337,18 @@ async function hint() {
         const result = await window.SudokuCloud.recordDailyHint(state.dailyChallengeDate);
         state.hintsUsed = result.hintsUsed;
       } catch (error) {
-        statusElement.textContent = `Connect to keep daily hints ranked: ${error.message}`;
+        setStatus('hintConnect', {error: error.message});
         return;
       }
     }
     enter(state.solution[row][col], index);
   }
-  statusElement.textContent = 'A little nudge, right where you needed it.';
+  setStatus('nudge');
   boardElement.children[index].classList.add('hint');
 }
 async function startDailyChallenge(challenge) {
   const solution = solve(challenge.puzzle);
-  if (!solution) { statusElement.textContent = 'The daily puzzle could not be loaded.'; return; }
+  if (!solution) { setStatus('dailyLoadError'); return; }
   celebrationShown = false; armedDigit = null;
   state.grid = cloneGrid(challenge.puzzle);
   state.givens = cloneGrid(challenge.puzzle);
@@ -327,9 +359,10 @@ async function startDailyChallenge(challenge) {
   state.startedAt = Date.now(); state.dailyChallengeDate = challenge.date;
   state.hintsUsed = 0; state.usedSolve = false;
   $('#difficulty').value = challenge.difficulty || 'medium';
-  $('#ritual-label').textContent = `DAILY CHALLENGE · ${challenge.date}`;
+  $('#ritual-label').lastElementChild.textContent = translate('dailyLabel', {date: challenge.date});
   $('#notes').classList.remove('active');
-  statusElement.textContent = 'Today’s shared puzzle. Make your place on the board.';
+  setStatus('dailyStatus');
+  setPage('challenge', {resetDaily: false});
   save(); render(); animateReveal();
 }
 async function submitDailyResult() {
@@ -342,11 +375,11 @@ async function submitDailyResult() {
       hintsUsed: state.hintsUsed,
       usedSolve: state.usedSolve,
     });
-    statusElement.textContent = result.improved
-      ? `Ranked time saved · ${Math.floor(result.score / 60).toString().padStart(2, '0')}:${(result.score % 60).toString().padStart(2, '0')} with hint penalties.`
-      : 'You already have a faster ranked time for today.';
+    if (result.improved) {
+      setStatus('rankedSaved', {time: `${Math.floor(result.score / 60).toString().padStart(2, '0')}:${(result.score % 60).toString().padStart(2, '0')}`});
+    } else setStatus('fasterAlready');
   } catch (error) {
-    statusElement.textContent = `Solved locally; ranking could not be saved: ${error.message}`;
+    setStatus('rankingSaveError', {error: error.message});
   }
 }
 function showToast(message) {
@@ -372,12 +405,18 @@ function load() {
   } catch (_) { /* Start a clean game when stored data is incomplete. */ }
   newGame();
 }
+document.querySelectorAll('.page-tab').forEach((button) => {
+  button.addEventListener('click', () => setPage(button.dataset.page));
+});
+window.addEventListener('hashchange', () => {
+  setPage(location.hash === '#challenge' ? 'challenge' : 'solve');
+});
 $('#new-game').addEventListener('click', newGame);
 $('#undo').addEventListener('click', undo);
 $('#erase').addEventListener('click', erase);
 $('#hint').addEventListener('click', hint);
 $('#solve').addEventListener('click', solvePuzzle);
-$('#notes').addEventListener('click', () => { state.noteMode = !state.noteMode; $('#notes').classList.toggle('active', state.noteMode); statusElement.textContent = state.noteMode ? 'Pencil notes on.' : 'Pencil notes off.'; });
+$('#notes').addEventListener('click', () => { state.noteMode = !state.noteMode; $('#notes').classList.toggle('active', state.noteMode); setStatus(state.noteMode ? 'notesOn' : 'notesOff'); });
 function applyTheme(themeId) {
   const theme = THEMES.find((item) => item[0] === themeId) || THEMES[0];
   const vars = ['--bg','--panel','--panel2','--line','--text','--muted','--accent','--accent-ink','--given','--entry','--selected','--related','--same','--error','--error-bg'];
@@ -445,7 +484,7 @@ $('#settings-dialog').addEventListener('close', () => {
     preferences.theme = pendingTheme;
     preferences.rapidEntry = $('#rapid-entry').checked;
     armedDigit = null; savePreferences(); render();
-    statusElement.textContent = 'Settings saved.';
+    setStatus('settingsSaved');
   } else {
     pendingTheme = originalTheme;
     applyTheme(originalTheme); render();
@@ -469,6 +508,17 @@ window.addEventListener('keydown', (event) => {
 });
 timerHandle = setInterval(() => { if (!isSolved()) state.seconds = Math.max(0, Math.floor((Date.now() - state.startedAt) / 1000)); timerElement.textContent = `${String(Math.floor(state.seconds / 60)).padStart(2,'0')}:${String(state.seconds % 60).padStart(2,'0')}`; save(); }, 1000);
 window.addEventListener('sudoku:daily-start', (event) => startDailyChallenge(event.detail));
+window.addEventListener('sudoku:language-change', () => {
+  buildBoard();
+  render();
+  $('#entry-help').textContent = preferences.rapidEntry
+    ? (armedDigit ? translate('quickArmed', {n: armedDigit}) : translate('quickHelp'))
+    : translate('selectThenNumber');
+  if (state.dailyChallengeDate) {
+    $('#ritual-label').lastElementChild.textContent = translate('dailyLabel', {date: state.dailyChallengeDate});
+  }
+  setStatus(statusMessage[0], statusMessage[1]);
+});
 window.addEventListener('sudoku:cloud-game', (event) => {
   const saved = event.detail;
   if (!saved) return;
@@ -485,8 +535,9 @@ window.addEventListener('sudoku:cloud-game', (event) => {
   if (THEMES.some((theme) => theme[0] === saved.theme)) { preferences.theme = saved.theme; applyTheme(saved.theme); savePreferences(); }
   preferences.rapidEntry = saved.rapidEntry !== false;
   state.difficulty = saved.difficulty || 'medium'; $('#difficulty').value = state.difficulty;
-  if (state.dailyChallengeDate) $('#ritual-label').textContent = `DAILY CHALLENGE · ${state.dailyChallengeDate}`;
-  statusElement.textContent = 'Your latest cloud game is ready.'; render();
+  if (state.dailyChallengeDate) setPage('challenge', {resetDaily: false});
+  else setPage('solve', {resetDaily: false});
+  setStatus('cloudReady'); render();
 });
 window.addEventListener('sudoku:cloud-empty', () => save());
 buildBoard();
@@ -496,7 +547,10 @@ if (!THEMES.some((theme) => theme[0] === preferences.theme)) preferences.theme =
 preferences.rapidEntry = preferences.rapidEntry !== false;
 pendingTheme = preferences.theme;
 applyTheme(preferences.theme); $('#rapid-entry').checked = preferences.rapidEntry;
-load(); render(); animateReveal();
+load();
+setStatus(state.dailyChallengeDate ? 'dailyStatus' : 'fresh');
+render(); animateReveal();
+setPage(state.dailyChallengeDate ? 'challenge' : 'solve', {resetDaily: false});
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));

@@ -14,95 +14,117 @@
   <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
   <main class="app-shell">
     <header class="masthead">
-      <a class="brand" href="#" aria-label="Sudoku home"><span class="brand-mark">✳</span> STILL / 09</a>
+      <a class="brand" href="#" aria-label="Sudoku home" data-i18n-aria-label="home"><span class="brand-mark">✳</span> STILL / 09</a>
       <div class="cloud-actions">
-        <button class="cloud-button" id="daily-challenge">Daily challenge</button>
-        <button class="cloud-button" id="leaderboard-button">Leaderboard</button>
-        <button class="cloud-button" id="account-button">Sign in</button>
-        <button class="icon-button" id="settings-button" aria-label="Open settings" title="Settings">⚙</button>
+        <button class="cloud-button" id="account-button" data-i18n="signIn">Sign in</button>
+        <button class="icon-button" id="language-button" aria-label="Switch language" data-i18n-aria-label="switchLanguage" title="中文 / English">中</button>
+        <button class="icon-button" id="settings-button" aria-label="Open settings" data-i18n-aria-label="openSettings" title="Settings">⚙</button>
       </div>
     </header>
+    <nav class="page-tabs" aria-label="Main navigation">
+      <button class="page-tab active" data-page="solve" data-i18n="solveMode">Solve</button>
+      <button class="page-tab" data-page="challenge" data-i18n="challengeMode">Challenge</button>
+    </nav>
+    <section class="page-view" id="solve-page">
     <section class="intro">
-      <p class="eyebrow" id="ritual-label"><span class="live-dot"></span> DAILY RITUAL · NO RUSH</p>
-      <h1>A little<br><em>clarity.</em></h1>
-      <p class="lede">One quiet square at a time.</p>
+      <p class="eyebrow" id="ritual-label"><span class="live-dot"></span> <span data-i18n="ritual">DAILY RITUAL · NO RUSH</span></p>
+      <h1 data-i18n="solveTitle">A little<br><em>clarity.</em></h1>
+      <p class="lede" data-i18n="solveDescription">One quiet square at a time.</p>
+    </section>
+    <div id="solve-game-host" class="game-host"></div>
+    </section>
+    <section class="page-view challenge-page" id="challenge-page" hidden>
+      <div id="challenge-lobby">
+      <section class="intro challenge-intro">
+        <p class="eyebrow"><span class="live-dot"></span> <span data-i18n="dailyChallenge">DAILY CHALLENGE</span></p>
+        <h1 data-i18n="challengeTitle">A shared<br><em>moment.</em></h1>
+        <p class="lede" data-i18n="challengeDescription">One puzzle for everyone. Solve it, then see where you rank.</p>
+        <div class="challenge-actions">
+          <button class="new-game" id="daily-challenge" data-i18n="startChallenge">Start today’s challenge <span>↗</span></button>
+          <button class="cloud-button" id="leaderboard-button" data-i18n="leaderboard">Leaderboard</button>
+        </div>
+        <p class="cloud-note" id="challenge-account-note" data-i18n="challengeLoginNote">Sign in to submit a ranked time. You can preview the challenge as a guest.</p>
+      </section>
+      </div>
+      <div id="challenge-game-host"></div>
     </section>
     <section class="game" aria-label="Sudoku game">
       <div class="game-bar">
-        <label class="visually-hidden" for="difficulty">Difficulty</label>
-        <select id="difficulty" aria-label="Puzzle difficulty">
-          <option value="easy">Easy</option><option value="medium" selected>Medium</option>
-          <option value="hard">Hard</option><option value="expert">Expert</option>
+        <label class="visually-hidden" for="difficulty" data-i18n="difficulty">Difficulty</label>
+        <select id="difficulty" aria-label="Puzzle difficulty" data-i18n-aria="difficulty">
+          <option value="easy" data-i18n="easy">Easy</option><option value="medium" selected data-i18n="medium">Medium</option>
+          <option value="hard" data-i18n="hard">Hard</option><option value="expert" data-i18n="expert">Expert</option>
         </select>
-        <button class="new-game" id="new-game">New puzzle <span>↗</span></button>
-        <div class="timer" id="timer" aria-label="Elapsed time">00:00</div>
+        <button class="new-game" id="new-game"><span data-i18n="newPuzzle">New puzzle</span> <span>↗</span></button>
+        <div class="timer" id="timer" aria-label="Elapsed time" data-i18n-aria="timer">00:00</div>
       </div>
-      <div class="board-legend" aria-label="Number colors"><span><i class="legend-given">8</i> PUZZLE</span><span><i class="legend-entry">8</i> YOURS</span></div>
-      <div id="board" class="board" role="grid" aria-label="Sudoku board"></div>
+      <div class="board-legend" aria-label="Number colors" data-i18n-aria="numberColors"><span><i class="legend-given">8</i> <span data-i18n="puzzle">PUZZLE</span></span><span><i class="legend-entry">8</i> <span data-i18n="yours">YOURS</span></span></div>
+      <div id="board" class="board" role="grid" aria-label="Sudoku board" data-i18n-aria="board"></div>
       <div class="status" id="status" role="status" aria-live="polite">A fresh page. Take your time.</div>
-      <p class="entry-help" id="entry-help">Quick place: choose a number, then tap the squares to fill.</p>
-      <div class="number-pad" id="number-pad" aria-label="Choose a number to place"></div>
+      <p class="entry-help" id="entry-help"></p>
+      <div class="number-pad" id="number-pad" aria-label="Choose a number to place" data-i18n-aria="numberPad"></div>
       <div class="actions">
-        <button id="undo">↶ <span>Undo</span></button>
-        <button id="notes">✎ <span>Notes</span></button>
-        <button id="hint">✧ <span>Hint</span></button>
-        <button id="erase">⌫ <span>Erase</span></button>
-        <button id="solve" title="Reveal the complete solution">✓ <span>Solve</span></button>
+        <button id="undo">↶ <span data-i18n="undo">Undo</span></button>
+        <button id="notes">✎ <span data-i18n="notes">Notes</span></button>
+        <button id="hint">✧ <span data-i18n="hint">Hint</span></button>
+        <button id="erase">⌫ <span data-i18n="erase">Erase</span></button>
+        <button id="solve" title="Reveal the complete solution" data-i18n-title="revealTitle">✓ <span data-i18n="solve">Solve</span></button>
       </div>
       <div class="progress-row"><span id="progress-label">0 / 81 filled</span><div class="progress-track"><span id="progress"></span></div></div>
       <p class="cloud-status" id="cloud-status">Playing as guest</p>
     </section>
-    <footer><span>MADE FOR A MOMENT OF CALM</span><span>ARROWS · 1–9 FILL · N NOTES · S SOLVES</span></footer>
+    <footer><span data-i18n="footerMotto">MADE FOR A MOMENT OF CALM</span><span data-i18n="footerKeys">ARROWS · 1–9 FILL · N NOTES · S SOLVES</span></footer>
   </main>
   <dialog class="settings-dialog" id="settings-dialog" aria-labelledby="settings-title">
     <form id="settings-form" method="dialog">
-      <div class="settings-heading"><p class="eyebrow">MAKE IT YOURS</p><button class="dialog-close" value="cancel" aria-label="Close settings">×</button></div>
-      <h2 id="settings-title">Your little corner.</h2>
+      <div class="settings-heading"><p class="eyebrow" data-i18n="settings">MAKE IT YOURS</p><button class="dialog-close" value="cancel" aria-label="Close settings" data-i18n-aria-label="closeSettings">×</button></div>
+      <h2 id="settings-title" data-i18n="settingsTitle">Your little corner.</h2>
       <div class="theme-settings-layout">
         <div>
-          <p class="setting-label">Choose a palette · 20 colors</p>
-          <div class="theme-picker" id="theme-picker" role="listbox" aria-label="Color palettes"></div>
+          <p class="setting-label" data-i18n="palettes">Choose a palette · 20 colors</p>
+          <div class="theme-picker" id="theme-picker" role="listbox" aria-label="Color palettes" data-i18n-aria-label="palettes"></div>
         </div>
         <div class="theme-preview-panel">
-          <p class="setting-label">Live preview</p>
+          <p class="setting-label" data-i18n="livePreview">Live preview</p>
           <p id="theme-preview-name" class="preview-name"></p>
-          <div id="theme-preview" class="theme-preview" role="img" aria-label="Sample Sudoku board"></div>
-          <div class="preview-legend"><span><i class="legend-given">5</i> Puzzle</span><span><i class="legend-entry">8</i> Yours</span></div>
+          <div id="theme-preview" class="theme-preview" role="img" aria-label="Sample Sudoku board" data-i18n-aria-label="previewBoard"></div>
+          <div class="preview-legend"><span><i class="legend-given">5</i> <span data-i18n="puzzle">Puzzle</span></span><span><i class="legend-entry">8</i> <span data-i18n="yours">Yours</span></span></div>
         </div>
       </div>
-      <label class="setting-check"><input id="rapid-entry" type="checkbox"><span><strong>Quick place</strong><small>Choose a number, then tap multiple squares to place it.</small></span></label>
-      <p class="setting-caption">Preview applies immediately. Cancel restores your saved palette.</p>
-      <div class="settings-buttons"><button class="settings-cancel" value="cancel">Cancel</button><button class="new-game settings-done" value="confirm">Confirm <span>✓</span></button></div>
+      <label class="setting-check"><input id="rapid-entry" type="checkbox"><span><strong data-i18n="quickPlace">Quick place</strong><small data-i18n="quickPlaceHelp">Choose a number, then tap multiple squares to place it.</small></span></label>
+      <p class="setting-caption" data-i18n="settingsCaption">Preview applies immediately. Cancel restores your saved palette.</p>
+      <div class="settings-buttons"><button class="settings-cancel" value="cancel" data-i18n="cancel">Cancel</button><button class="new-game settings-done" value="confirm"><span data-i18n="confirm">Confirm</span> <span>✓</span></button></div>
     </form>
   </dialog>
   <dialog class="cloud-dialog" id="account-dialog" aria-labelledby="account-title">
     <form id="account-form">
-      <div class="settings-heading"><p class="eyebrow">YOUR SUDOKU JOURNEY</p><button class="dialog-close" type="button" onclick="document.querySelector('#account-dialog').close()" aria-label="Close account">×</button></div>
-      <h2 id="account-title">Welcome back</h2>
+      <div class="settings-heading"><p class="eyebrow" data-i18n="accountEyebrow">YOUR SUDOKU JOURNEY</p><button class="dialog-close" type="button" onclick="document.querySelector('#account-dialog').close()" aria-label="Close account" data-i18n-aria-label="closeAccount">×</button></div>
+      <h2 id="account-title" data-i18n="welcome">Welcome back</h2>
       <p id="account-status" class="cloud-note" role="status" aria-live="polite"></p>
       <div id="account-login-fields">
-        <button class="google-button" type="button" id="google-signin">Continue with Google</button>
-        <div class="or-divider"><span>or email</span></div>
-        <label class="cloud-label" for="account-display-name" id="display-name-field" hidden>Display name<input id="account-display-name" autocomplete="nickname" minlength="3" maxlength="24"></label>
-        <label class="cloud-label" for="account-email">Email<input id="account-email" type="email" autocomplete="email" required></label>
-        <label class="cloud-label" for="account-password">Password<input id="account-password" type="password" autocomplete="current-password" minlength="6" required></label>
-        <button class="new-game cloud-submit" id="account-submit" type="submit">Sign in</button>
-        <button class="cloud-link" id="account-mode-toggle" type="button">Create an account</button>
+        <button class="google-button" type="button" id="google-signin" data-i18n="google">Continue with Google</button>
+        <div class="or-divider"><span data-i18n="orEmail">or email</span></div>
+        <label class="cloud-label" for="account-display-name" id="display-name-field" hidden><span data-i18n="displayName">Display name</span><input id="account-display-name" autocomplete="nickname" minlength="3" maxlength="24"></label>
+        <label class="cloud-label" for="account-email"><span data-i18n="email">Email</span><input id="account-email" type="email" autocomplete="email" required></label>
+        <label class="cloud-label" for="account-password"><span data-i18n="password">Password</span><input id="account-password" type="password" autocomplete="current-password" minlength="6" required></label>
+        <button class="new-game cloud-submit" id="account-submit" type="submit" data-i18n="signIn">Sign in</button>
+        <button class="cloud-link" id="account-mode-toggle" type="button" data-i18n="createAccount">Create an account</button>
       </div>
-      <button class="cloud-link signout-link" id="account-signout" type="button" hidden>Sign out</button>
-      <p class="cloud-footnote">Your puzzles and rankings sync across devices. Guest games stay on this device.</p>
+      <button class="cloud-link signout-link" id="account-signout" type="button" hidden data-i18n="signOut">Sign out</button>
+      <p class="cloud-footnote" data-i18n="cloudFootnote">Your puzzles and rankings sync across devices. Guest games stay on this device.</p>
     </form>
   </dialog>
   <dialog class="cloud-dialog leaderboard-dialog" id="leaderboard-dialog" aria-labelledby="leaderboard-title">
-    <div class="settings-heading"><p class="eyebrow">TODAY’S CHALLENGE</p><button class="dialog-close" type="button" onclick="document.querySelector('#leaderboard-dialog').close()" aria-label="Close leaderboard">×</button></div>
-    <h2 id="leaderboard-title">Daily leaderboard</h2>
-    <p id="leaderboard-note" class="cloud-note">Sign in to see today’s fastest solves.</p>
+    <div class="settings-heading"><p class="eyebrow" data-i18n="leaderboardEyebrow">TODAY’S CHALLENGE</p><button class="dialog-close" type="button" onclick="document.querySelector('#leaderboard-dialog').close()" aria-label="Close leaderboard" data-i18n-aria-label="closeLeaderboard">×</button></div>
+    <h2 id="leaderboard-title" data-i18n="leaderboardTitle">Daily leaderboard</h2>
+    <p id="leaderboard-note" class="cloud-note" data-i18n="leaderboardSignIn">Sign in to see today’s fastest solves.</p>
     <ol id="leaderboard-list" class="leaderboard-list"></ol>
-    <p class="cloud-footnote">Times include a two-minute penalty for each hint. Revealed solutions are not ranked.</p>
+    <p class="cloud-footnote" data-i18n="leaderboardFootnote">Times include a two-minute penalty for each hint. Revealed solutions are not ranked.</p>
   </dialog>
   <div class="toast" id="toast" role="status"></div>
   <div class="celebration" id="celebration" aria-hidden="true"></div>
   <script src="firebase-config.js"></script>
+  <script src="i18n.js"></script>
   <script src="app.js"></script>
   <script type="module" src="cloud.js"></script>
 </body>
