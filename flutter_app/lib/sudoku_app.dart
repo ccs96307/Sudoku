@@ -790,9 +790,9 @@ class _SudokuHomeState extends State<SudokuHome> {
                         )
                       : Column(
                           children: [
-                            _intro(compact: true),
-                            const SizedBox(height: 24),
-                            _gamePanel(),
+                            _brandBar(),
+                            const SizedBox(height: 4),
+                            _gamePanel(compact: true),
                           ],
                         );
                   return Center(
@@ -800,8 +800,8 @@ class _SudokuHomeState extends State<SudokuHome> {
                       constraints: const BoxConstraints(maxWidth: 1320),
                       child: SingleChildScrollView(
                         padding: EdgeInsets.symmetric(
-                          horizontal: wide ? 64 : 20,
-                          vertical: 28,
+                          horizontal: wide ? 64 : 16,
+                          vertical: wide ? 28 : 8,
                         ),
                         child: content,
                       ),
@@ -816,6 +816,40 @@ class _SudokuHomeState extends State<SudokuHome> {
       ),
     );
   }
+
+  Widget _brandBar() => Row(
+    children: [
+      Text(
+        'STILL',
+        style: TextStyle(
+          color: _palette.accent,
+          fontSize: 14,
+          letterSpacing: 4,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+      const SizedBox(width: 12),
+      Text(
+        'SUDOKU  /  09',
+        style: TextStyle(
+          color: _palette.muted,
+          fontSize: 11,
+          letterSpacing: 2,
+        ),
+      ),
+      const Spacer(),
+      IconButton(
+        onPressed: _showAccount,
+        icon: Icon(_user == null ? Icons.person_outline : Icons.cloud_done),
+        tooltip: _user?.email ?? 'Account and cloud sync',
+      ),
+      IconButton(
+        onPressed: _showSettings,
+        icon: const Icon(Icons.tune_rounded),
+        tooltip: 'Settings',
+      ),
+    ],
+  );
 
   Widget _intro({bool compact = false}) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -911,7 +945,7 @@ class _SudokuHomeState extends State<SudokuHome> {
     ],
   );
 
-  Widget _gamePanel() => Column(
+  Widget _gamePanel({bool compact = false}) => Column(
     children: [
       Row(
         children: [
@@ -935,7 +969,7 @@ class _SudokuHomeState extends State<SudokuHome> {
           ),
         ],
       ),
-      const SizedBox(height: 12),
+      SizedBox(height: compact ? 5 : 12),
       Row(
         children: [
           Expanded(
@@ -953,37 +987,45 @@ class _SudokuHomeState extends State<SudokuHome> {
           ),
         ],
       ),
-      const SizedBox(height: 8),
+      SizedBox(height: compact ? 5 : 8),
       _board(),
-      const SizedBox(height: 16),
-      _numberPad(),
-      const SizedBox(height: 15),
+      SizedBox(height: compact ? 7 : 16),
+      _numberPad(compact: compact),
+      SizedBox(height: compact ? 7 : 15),
       Wrap(
         alignment: WrapAlignment.center,
-        spacing: 8,
-        runSpacing: 8,
+        spacing: compact ? 5 : 8,
+        runSpacing: compact ? 5 : 8,
         children: [
           _actionButton(
             Icons.edit_note_rounded,
             'Notes',
             () => setState(() => _pencil = !_pencil),
             active: _pencil,
+            compact: compact,
           ),
           _actionButton(
             Icons.lightbulb_outline_rounded,
             'Hint',
             () => unawaited(_hint()),
+            compact: compact,
           ),
-          _actionButton(Icons.backspace_outlined, 'Erase', _erase),
+          _actionButton(
+            Icons.backspace_outlined,
+            'Erase',
+            _erase,
+            compact: compact,
+          ),
           _actionButton(
             Icons.undo_rounded,
             'Undo',
             _undo,
             enabled: _history.isNotEmpty,
+            compact: compact,
           ),
         ],
       ),
-      const SizedBox(height: 12),
+      SizedBox(height: compact ? 7 : 12),
       Row(
         children: [
           Expanded(
@@ -1168,7 +1210,7 @@ class _SudokuHomeState extends State<SudokuHome> {
     ],
   );
 
-  Widget _numberPad() => Row(
+  Widget _numberPad({bool compact = false}) => Row(
     children: [
       for (var digit = 1; digit <= 9; digit++)
         Expanded(
@@ -1187,7 +1229,7 @@ class _SudokuHomeState extends State<SudokuHome> {
               borderRadius: BorderRadius.circular(10),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 160),
-                height: 48,
+                height: compact ? 40 : 48,
                 decoration: BoxDecoration(
                   color: _armedDigit == digit
                       ? _palette.accent
@@ -1206,7 +1248,7 @@ class _SudokuHomeState extends State<SudokuHome> {
                       color: _armedDigit == digit
                           ? _palette.accentInk
                           : _palette.text,
-                      fontSize: 18,
+                      fontSize: compact ? 16 : 18,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -1224,14 +1266,19 @@ class _SudokuHomeState extends State<SudokuHome> {
     VoidCallback action, {
     bool active = false,
     bool enabled = true,
+    bool compact = false,
   }) => OutlinedButton.icon(
     onPressed: enabled ? action : null,
-    icon: Icon(icon, size: 17),
+    icon: Icon(icon, size: compact ? 14 : 17),
     label: Text(label),
     style: OutlinedButton.styleFrom(
       foregroundColor: active ? _palette.accent : _palette.text,
       side: BorderSide(color: active ? _palette.accent : _palette.line),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 6 : 12,
+        vertical: compact ? 5 : 10,
+      ),
+      textStyle: TextStyle(fontSize: compact ? 11 : 14),
     ),
   );
 
