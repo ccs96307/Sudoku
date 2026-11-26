@@ -31,7 +31,7 @@ const boardElement = $('#board');
 const numberPad = $('#number-pad');
 const statusElement = $('#status');
 const timerElement = $('#timer');
-const state = {grid: [], givens: [], solution: [], selected: 0, notes: Array.from({length: 81}, () => new Set()), noteMode: false, history: [], seconds: 0, startedAt: Date.now(), dailyChallengeDate: null, hintsUsed: 0, usedSolve: false, savedAt: 0};
+const state = {grid: [], givens: [], solution: [], selected: 0, notes: Array.from({length: 81}, () => new Set()), noteMode: false, history: [], seconds: 0, startedAt: Date.now(), dailyChallengeDate: null, hintsUsed: 0, usedSolve: false, customPuzzle: false, savedAt: 0};
 let toastTimeout;
 let armedDigit = null;
 let preferences = {theme: 'midnight-garden', rapidEntry: true};
@@ -65,6 +65,7 @@ function setPage(page, {resetDaily = true} = {}) {
   $('#challenge-game-host').hidden = !inChallenge;
   $('#difficulty').hidden = inChallenge;
   $('#new-game').hidden = inChallenge;
+  $('#enter-puzzle').hidden = inChallenge;
   $('#ritual-label').lastElementChild.textContent = inChallenge
     ? translate('dailyLabel', {date: state.dailyChallengeDate})
     : translate('ritualLabel');
@@ -193,6 +194,8 @@ function render(popIndex = -1) {
     button.classList.toggle('complete', counts[index + 1] >= 9);
     button.classList.toggle('armed', armedDigit === index + 1);
   });
+  $('#enter-puzzle').setAttribute('aria-pressed', String(state.customPuzzle));
+  $('#hint').disabled = state.customPuzzle;
   $('#entry-help').textContent = preferences.rapidEntry
     ? (armedDigit ? translate('quickArmed', {n: armedDigit}) : translate('quickHelp'))
     : translate('selectThenNumber');
@@ -203,12 +206,13 @@ function save() {
   state.savedAt = Date.now();
   const saved = {...state, theme: preferences.theme, rapidEntry: preferences.rapidEntry, notes: state.notes.map((notes) => [...notes]), history: []};
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(saved)); } catch (_) { showToast(translate('saveError')); }
-  window.SudokuCloud?.saveGame?.(saved);
+  if (!state.customPuzzle) window.SudokuCloud?.saveGame?.(saved);
 }
 function newGame() {
   setPage('solve', {resetDaily: false});
   const {puzzle, solution} = makePuzzle($('#difficulty').value);
   celebrationShown = false; armedDigit = null;
+  state.customPuzzle = false;
   state.grid = puzzle; state.givens = cloneGrid(puzzle); state.solution = solution; state.difficulty = $('#difficulty').value; state.selected = puzzle.flat().findIndex((value) => !value);
   state.notes = Array.from({length: 81}, () => new Set()); state.history = []; state.noteMode = false; state.seconds = 0; state.startedAt = Date.now();
   state.dailyChallengeDate = null; state.hintsUsed = 0; state.usedSolve = false;
@@ -217,6 +221,23 @@ function newGame() {
   setStatus('fresh');
   save(); render(); animateReveal();
   boardElement.animate([{opacity:.35,transform:'scale(.985)'},{opacity:1,transform:'scale(1)'}], {duration:520,easing:'cubic-bezier(.2,.7,.2,1)'});
+}
+function enterCustomPuzzle() {
+  setPage('solve', {resetDaily: false});
+  celebrationShown = false; armedDigit = null;
+  state.grid = Array.from({length: 9}, () => Array(9).fill(0));
+  state.givens = cloneGrid(state.grid);
+  state.solution = cloneGrid(state.grid);
+  state.notes = Array.from({length: 81}, () => new Set());
+  state.history = []; state.selected = 0; state.noteMode = false;
+  state.seconds = 0; state.startedAt = Date.now();
+  state.dailyChallengeDate = null; state.hintsUsed = 0; state.usedSolve = false;
+  state.customPuzzle = true;
+  $('#notes').classList.remove('active');
+  $('#ritual-label').lastElementChild.textContent = translate('ritualLabel');
+  setStatus('manualReady');
+  save(); render();
+  boardElement.animate([{opacity:.35,transform:'scale(.985)'},{opacity:1,transform:'scale(1)'}], {duration:380,easing:'cubic-bezier(.2,.7,.2,1)'});
 }
 function animateReveal() {
   [...boardElement.children].forEach((cell, index) => { cell.style.setProperty('--delay', `${index * 4}ms`); cell.classList.add('reveal'); });
@@ -283,6 +304,9 @@ function undo() {
   if (previous.type === 'board') {
     state.grid = cloneGrid(previous.grid);
     state.notes = previous.notes.map((items) => items.slice());
+    if (previous.givens) state.givens = cloneGrid(previous.givens);
+    if (previous.solution) state.solution = cloneGrid(previous.solution);
+    if (typeof previous.customPuzzle === 'boolean') state.customPuzzle = previous.customPuzzle;
   } else {
     const row = Math.floor(previous.index / 9), col = previous.index % 9;
     state.grid[row][col] = previous.value;
@@ -299,7 +323,20 @@ function pauseClock() {
   timerElement.textContent = `${String(Math.floor(state.seconds / 60)).padStart(2,'0')}:${String(state.seconds % 60).padStart(2,'0')}`;
 }
 async function solvePuzzle() {
-  if (isSolved()) { setStatus('alreadySolved'); return; }
+  let customSolution = null;
+  let customClues = null;
+  if (state.customPuzzle) {
+    const puzzle = cloneGrid(state.grid);
+    if (!puzzle.flat().some(Boolean)) { setStatus('manualEmpty'); return; }
+    if (!valid(puzzle)) { setStatus('manualConflict'); return; }
+    const solutionCount = countSolutions(puzzle);
+    if (!solutionCount) { setStatus('manualNoSolution'); return; }
+    if (solutionCount > 1) { setStatus('manualMultiple'); return; }
+    customSolution = solve(puzzle);
+    customClues = puzzle;
+  } else if (isSolved()) {
+    setStatus('alreadySolved'); return;
+  }
   if (state.dailyChallengeDate && !state.usedSolve) {
     try { await window.SudokuCloud?.recordDailyReveal(state.dailyChallengeDate); }
     catch (error) { setStatus('solutionRevealError', {error: error.message}); }
@@ -308,7 +345,15 @@ async function solvePuzzle() {
     type: 'board',
     grid: cloneGrid(state.grid),
     notes: state.notes.map((items) => [...items]),
+    givens: cloneGrid(state.givens),
+    solution: cloneGrid(state.solution),
+    customPuzzle: state.customPuzzle,
   });
+  if (customSolution && customClues) {
+    state.solution = customSolution;
+    state.givens = customClues;
+    state.customPuzzle = false;
+  }
   pauseClock();
   state.grid = cloneGrid(state.solution);
   state.notes = Array.from({length: 81}, () => new Set());
@@ -350,6 +395,7 @@ async function startDailyChallenge(challenge) {
   const solution = solve(challenge.puzzle);
   if (!solution) { setStatus('dailyLoadError'); return; }
   celebrationShown = false; armedDigit = null;
+  state.customPuzzle = false;
   state.grid = cloneGrid(challenge.puzzle);
   state.givens = cloneGrid(challenge.puzzle);
   state.solution = solution;
@@ -389,9 +435,14 @@ function showToast(message) {
 function load() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if (saved && hasGridShape(saved.grid) && hasGridShape(saved.givens) &&
-        hasGridShape(saved.solution) && saved.solution.flat().every(Boolean) &&
-        valid(saved.solution) && valid(saved.givens) && matchesPuzzle(saved.givens, saved.solution)) {
+    const customDraft = saved?.customPuzzle === true &&
+      hasGridShape(saved.grid) && hasGridShape(saved.givens) &&
+      hasGridShape(saved.solution) && saved.solution.flat().every((value) => value === 0) &&
+      saved.givens.flat().every((value) => value === 0);
+    const generatedGame = saved && hasGridShape(saved.grid) && hasGridShape(saved.givens) &&
+      hasGridShape(saved.solution) && saved.solution.flat().every(Boolean) &&
+      valid(saved.solution) && valid(saved.givens) && matchesPuzzle(saved.givens, saved.solution);
+    if (customDraft || generatedGame) {
       Object.assign(state, saved); state.notes = Array.from({length: 81}, (_, index) =>
         new Set(Array.isArray(saved.notes?.[index]) ? saved.notes[index].filter((value) => Number.isInteger(value) && value >= 1 && value <= 9) : []));
       state.history = [];
@@ -412,6 +463,7 @@ window.addEventListener('hashchange', () => {
   setPage(location.hash === '#challenge' ? 'challenge' : 'solve');
 });
 $('#new-game').addEventListener('click', newGame);
+$('#enter-puzzle').addEventListener('click', enterCustomPuzzle);
 $('#undo').addEventListener('click', undo);
 $('#erase').addEventListener('click', erase);
 $('#hint').addEventListener('click', hint);
@@ -522,6 +574,7 @@ window.addEventListener('sudoku:language-change', () => {
 window.addEventListener('sudoku:cloud-game', (event) => {
   const saved = event.detail;
   if (!saved) return;
+  if (state.customPuzzle) return;
   if ((saved.savedAt || 0) < state.savedAt) { window.SudokuCloud?.saveGame({...state, theme: preferences.theme, rapidEntry: preferences.rapidEntry, notes: state.notes.map((items) => [...items]), history: []}); return; }
   if (!hasGridShape(saved.grid) || !hasGridShape(saved.givens) ||
       !hasGridShape(saved.solution) || !valid(saved.givens) || !valid(saved.solution) ||
@@ -548,7 +601,7 @@ preferences.rapidEntry = preferences.rapidEntry !== false;
 pendingTheme = preferences.theme;
 applyTheme(preferences.theme); $('#rapid-entry').checked = preferences.rapidEntry;
 load();
-setStatus(state.dailyChallengeDate ? 'dailyStatus' : 'fresh');
+setStatus(state.customPuzzle ? 'manualReady' : state.dailyChallengeDate ? 'dailyStatus' : 'fresh');
 render(); animateReveal();
 setPage(state.dailyChallengeDate ? 'challenge' : 'solve', {resetDaily: false});
 
