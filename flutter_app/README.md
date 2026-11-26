@@ -41,6 +41,8 @@ macOS and Xcode.
   cells as needed. Turn off Quick entry in Settings to select a cell first.
 - Pencil notes, erase, undo, hints, keyboard navigation, and one-tap animated
   solving.
+- Enter your own puzzle on a blank board; the app checks for conflicts and
+  ambiguous clues before solving.
 - Easy, medium, hard, and expert puzzle generation. Generation runs away from
   the UI thread and keeps puzzles uniquely solvable.
 - Local game and settings persistence through `SharedPreferencesAsync`.

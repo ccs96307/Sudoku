@@ -20,9 +20,18 @@ class SudokuApp extends StatelessWidget {
 }
 
 class _Snapshot {
-  const _Snapshot(this.grid, this.notes);
+  const _Snapshot({
+    required this.grid,
+    required this.givens,
+    required this.solution,
+    required this.notes,
+    required this.customPuzzle,
+  });
   final SudokuGrid grid;
+  final SudokuGrid givens;
+  final SudokuGrid solution;
   final List<Set<int>> notes;
+  final bool customPuzzle;
 }
 
 class SudokuHome extends StatefulWidget {
@@ -48,6 +57,7 @@ class _SudokuHomeState extends State<SudokuHome> {
   String _difficulty = 'medium';
   bool _rapidEntry = true;
   bool _pencil = false;
+  bool _customPuzzle = false;
   bool _busy = false;
   bool _loaded = false;
   Timer? _timer;
@@ -99,6 +109,7 @@ class _SudokuHomeState extends State<SudokuHome> {
   }
 
   bool get _isSolved =>
+      !_customPuzzle &&
       _grid.every((row) => row.every((value) => value != 0)) &&
       _grid.asMap().entries.every(
         (row) => row.value.asMap().entries.every(
@@ -134,6 +145,7 @@ class _SudokuHomeState extends State<SudokuHome> {
           _dailyDate = data['dailyDate'] as String?;
           _hintsUsed = (data['hintsUsed'] as num?)?.toInt() ?? 0;
           _usedSolve = data['usedSolve'] as bool? ?? false;
+          _customPuzzle = data['customPuzzle'] as bool? ?? false;
           _savedAt = (data['savedAt'] as num?)?.toInt() ?? 0;
           final storedNotes = data['notes'];
           if (storedNotes is List && storedNotes.length == 81) {
@@ -153,7 +165,8 @@ class _SudokuHomeState extends State<SudokuHome> {
     }
     if (!mounted) return;
     setState(() => _loaded = true);
-    if (_solution.every((row) => row.every((value) => value == 0))) {
+    if (!_customPuzzle &&
+        _solution.every((row) => row.every((value) => value == 0))) {
       await _newGame();
     }
   }
@@ -195,16 +208,18 @@ class _SudokuHomeState extends State<SudokuHome> {
       'dailyDate': _dailyDate,
       'hintsUsed': _hintsUsed,
       'usedSolve': _usedSolve,
+      'customPuzzle': _customPuzzle,
       'savedAt': _savedAt,
     };
     final data = jsonEncode(state);
     _saveQueue = _saveQueue.then((_) => _prefs.setString(_storageKey, data));
-    CloudService.instance.scheduleGameSync(state);
+    if (!_customPuzzle) CloudService.instance.scheduleGameSync(state);
     return _saveQueue;
   }
 
   Future<void> _restoreCloudGame() async {
     try {
+      if (_customPuzzle) return;
       final saved = await CloudService.instance.getSavedGame();
       if (!mounted || saved == null) return;
       final grid = _decodeGrid(saved['grid']);
@@ -268,6 +283,7 @@ class _SudokuHomeState extends State<SudokuHome> {
         _grid = copyGrid(generated.puzzle);
         _givens = copyGrid(generated.puzzle);
         _solution = copyGrid(generated.solution);
+        _customPuzzle = false;
         _notes = List.generate(81, (_) => <int>{});
         _history.clear();
         _seconds = 0;
@@ -290,11 +306,59 @@ class _SudokuHomeState extends State<SudokuHome> {
     }
   }
 
+  void _startCustomPuzzle() {
+    if (_busy) return;
+    setState(() {
+      _grid = List.generate(9, (_) => List.filled(9, 0));
+      _givens = copyGrid(_grid);
+      _solution = copyGrid(_grid);
+      _notes = List.generate(81, (_) => <int>{});
+      _history.clear();
+      _selected = 40;
+      _seconds = 0;
+      _dailyDate = null;
+      _hintsUsed = 0;
+      _usedSolve = false;
+      _armedDigit = null;
+      _pencil = false;
+      _customPuzzle = true;
+      _message = 'Blank board ready. Enter clues, then tap Solve.';
+    });
+    unawaited(_save());
+  }
+
+  bool _hasConflictAt(int row, int column) {
+    final value = _grid[row][column];
+    if (value == 0) return false;
+    for (var index = 0; index < 9; index++) {
+      if (index != column && _grid[row][index] == value) return true;
+      if (index != row && _grid[index][column] == value) return true;
+    }
+    final boxRow = row ~/ 3 * 3;
+    final boxColumn = column ~/ 3 * 3;
+    for (var currentRow = boxRow; currentRow < boxRow + 3; currentRow++) {
+      for (
+        var currentColumn = boxColumn;
+        currentColumn < boxColumn + 3;
+        currentColumn++
+      ) {
+        if ((currentRow != row || currentColumn != column) &&
+            _grid[currentRow][currentColumn] == value) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   void _remember() {
     _history.add(
       _Snapshot(
-        copyGrid(_grid),
-        _notes.map((items) => Set<int>.of(items)).toList(),
+        grid: copyGrid(_grid),
+        givens: copyGrid(_givens),
+        solution: copyGrid(_solution),
+        notes: _notes.map((items) => Set<int>.of(items)).toList(),
+        customPuzzle: _customPuzzle,
       ),
     );
     if (_history.length > 80) _history.removeAt(0);
@@ -305,7 +369,10 @@ class _SudokuHomeState extends State<SudokuHome> {
     final snapshot = _history.removeLast();
     setState(() {
       _grid = copyGrid(snapshot.grid);
+      _givens = copyGrid(snapshot.givens);
+      _solution = copyGrid(snapshot.solution);
       _notes = snapshot.notes;
+      _customPuzzle = snapshot.customPuzzle;
       _message = 'Last move undone.';
     });
     unawaited(_save());
@@ -324,9 +391,12 @@ class _SudokuHomeState extends State<SudokuHome> {
         _grid[row][column] = digit;
         _notes[_selected].clear();
       }
-      _message =
-          _grid[row][column] != 0 &&
-              _grid[row][column] != _solution[row][column]
+      _message = _customPuzzle
+          ? isValidGrid(_grid)
+                ? 'Puzzle clue added.'
+                : 'This clue conflicts with another clue.'
+          : _grid[row][column] != 0 &&
+                _grid[row][column] != _solution[row][column]
           ? 'That number conflicts with the solution.'
           : 'Nice move.';
     });
@@ -348,9 +418,70 @@ class _SudokuHomeState extends State<SudokuHome> {
   }
 
   Future<void> _solve() async {
-    if (_isSolved || _busy) return;
+    if (_busy || (!_customPuzzle && _isSolved)) return;
+    SudokuGrid? customSolution;
+    SudokuGrid? customClues;
+    if (_customPuzzle) {
+      final puzzle = copyGrid(_grid);
+      if (!puzzle.any((row) => row.any((value) => value != 0))) {
+        setState(() => _message = 'Enter at least one clue before solving.');
+        return;
+      }
+      if (!isValidGrid(puzzle)) {
+        setState(() => _message = 'Fix conflicting clues before solving.');
+        return;
+      }
+      setState(() {
+        _busy = true;
+        _message = 'Checking your puzzle…';
+      });
+      try {
+        final solutionCount = await compute(countSolutionsForIsolate, puzzle);
+        if (!mounted) return;
+        if (solutionCount == 0) {
+          setState(() {
+            _busy = false;
+            _message = 'These clues have no solution.';
+          });
+          return;
+        }
+        if (solutionCount > 1) {
+          setState(() {
+            _busy = false;
+            _message =
+                'At least $solutionCount solutions fit these clues. Add more clues.';
+          });
+          return;
+        }
+        customSolution = await compute(solveSudokuForIsolate, puzzle);
+        if (!mounted) return;
+        if (customSolution == null) {
+          setState(() {
+            _busy = false;
+            _message = 'Could not solve these clues.';
+          });
+          return;
+        }
+        customClues = puzzle;
+      } catch (error) {
+        if (mounted) {
+          setState(() {
+            _busy = false;
+            _message = 'Could not check the puzzle: $error';
+          });
+        }
+        return;
+      }
+    } else if (_isSolved) {
+      return;
+    }
     _remember();
     setState(() {
+      if (customSolution != null && customClues != null) {
+        _solution = customSolution;
+        _givens = copyGrid(customClues);
+        _customPuzzle = false;
+      }
       _busy = true;
       _message = 'A little clarity is on its way…';
     });
@@ -468,6 +599,7 @@ class _SudokuHomeState extends State<SudokuHome> {
         _grid = copyGrid(puzzle);
         _givens = copyGrid(puzzle);
         _solution = solution;
+        _customPuzzle = false;
         _notes = List.generate(81, (_) => <int>{});
         _history.clear();
         _seconds = 0;
@@ -831,11 +963,7 @@ class _SudokuHomeState extends State<SudokuHome> {
       const SizedBox(width: 12),
       Text(
         'SUDOKU  /  09',
-        style: TextStyle(
-          color: _palette.muted,
-          fontSize: 11,
-          letterSpacing: 2,
-        ),
+        style: TextStyle(color: _palette.muted, fontSize: 11, letterSpacing: 2),
       ),
       const Spacer(),
       IconButton(
@@ -950,7 +1078,7 @@ class _SudokuHomeState extends State<SudokuHome> {
       Row(
         children: [
           Text(
-            _difficulty.toUpperCase(),
+            _customPuzzle ? 'YOUR PUZZLE' : _difficulty.toUpperCase(),
             style: TextStyle(
               color: _palette.muted,
               fontSize: 11,
@@ -1008,6 +1136,7 @@ class _SudokuHomeState extends State<SudokuHome> {
             Icons.lightbulb_outline_rounded,
             'Hint',
             () => unawaited(_hint()),
+            enabled: !_customPuzzle,
             compact: compact,
           ),
           _actionButton(
@@ -1044,6 +1173,17 @@ class _SudokuHomeState extends State<SudokuHome> {
             ),
           ),
         ],
+      ),
+      TextButton.icon(
+        onPressed: _busy ? null : _startCustomPuzzle,
+        icon: const Icon(Icons.grid_on_rounded, size: 16),
+        label: Text(
+          _customPuzzle ? 'Clear custom puzzle' : 'Enter your own puzzle',
+        ),
+        style: TextButton.styleFrom(
+          foregroundColor: _customPuzzle ? _palette.accent : _palette.muted,
+          visualDensity: VisualDensity.compact,
+        ),
       ),
       if (_message != null) ...[
         const SizedBox(height: 12),
@@ -1095,7 +1235,9 @@ class _SudokuHomeState extends State<SudokuHome> {
                     col ~/ 3 == _selected % 9 ~/ 3);
             final same =
                 value != 0 && value == _grid[_selected ~/ 9][_selected % 9];
-            final conflict = value != 0 && value != _solution[row][col];
+            final conflict = _customPuzzle
+                ? _hasConflictAt(row, col)
+                : value != 0 && value != _solution[row][col];
             final thickRight = col == 2 || col == 5;
             final thickBottom = row == 2 || row == 5;
             return GestureDetector(
@@ -1175,7 +1317,7 @@ class _SudokuHomeState extends State<SudokuHome> {
                                   ? _palette.accentInk
                                   : conflict
                                   ? _palette.error
-                                  : _givens[row][col] != 0
+                                  : _customPuzzle || _givens[row][col] != 0
                                   ? _palette.given
                                   : _palette.entry,
                               fontSize: 23,
