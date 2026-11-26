@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // All reads and writes go through authenticated callable functions. This
+    // keeps puzzle solutions private and makes leaderboard records server-owned.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

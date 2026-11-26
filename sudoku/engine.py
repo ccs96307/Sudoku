@@ -33,7 +33,9 @@ def is_valid(grid: Grid) -> bool:
 
 def _unique_nonzero(values: Iterable[int]) -> bool:
     present = [value for value in values if value]
-    return all(value in _DIGITS for value in present) and len(present) == len(set(present))
+    return all(value in _DIGITS for value in present) and len(present) == len(
+        set(present)
+    )
 
 
 def candidates(grid: Grid, row: int, column: int) -> set[int]:

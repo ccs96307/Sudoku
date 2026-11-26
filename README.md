@@ -24,7 +24,10 @@ and visit `http://localhost:8000`. No web build step or server API is required.
 The browser edition includes responsive layouts, 20 configurable color
 palettes, quick number-first entry, keyboard controls, pencil notes, undo,
 hints, progress tracking, animated feedback, a service-worker app shell for
-repeat offline visits, and automatic `localStorage` saves.
+repeat offline visits, and automatic `localStorage` saves. Sign in to enable
+Firebase account sync, daily seeded challenges, and the server-validated daily
+leaderboard. The apps remain playable offline as guests. See
+[`firebase/README.md`](firebase/README.md) for setup and pricing.
 
 To publish with GitHub Pages, merge the project into `main` or `master`, then
 in the repository settings choose **Pages → GitHub Actions**. The included
@@ -66,9 +69,10 @@ commands. It can target Android, iOS, desktop, and Flutter Web.
 
 ## Design notes
 
-The app keeps the game private and offline: puzzles, timer state, and progress
-stay on the current device. The generator shuffles a solved grid and removes
-clues only while the puzzle retains exactly one solution. Difficulty labels
+Guest play keeps puzzles, timer state, and progress on the current device;
+signing in enables cloud sync and ranked daily play. The generator shuffles a
+solved grid and removes clues only while the puzzle retains exactly one
+solution. Difficulty labels
 set clue-count targets (40, 34, 29, and 25); actual human solving difficulty
 also depends on the puzzle's logical techniques, so the labels are approximate.
 

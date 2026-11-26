@@ -10,6 +10,7 @@ from PySide6.QtCore import (
     QSettings,
     Qt,
     QTimer,
+    Slot,
 )
 from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import (
@@ -23,13 +24,16 @@ from PySide6.QtWidgets import (
     QGridLayout,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QMainWindow,
+    QMessageBox,
     QPushButton,
     QVBoxLayout,
     QWidget,
 )
 
-from sudoku.engine import generate, is_valid
+from sudoku.cloud import CloudTask, FirebaseRestClient
+from sudoku.engine import generate, is_valid, solve
 from sudoku.themes import THEMES
 
 _STATE_PATH = Path.home() / ".beautiful-sudoku.json"
@@ -215,6 +219,20 @@ class SudokuWindow(QMainWindow):
         self.cells = []
         self.number_buttons = []
         self.cell_animations = {}
+        self.cloud = FirebaseRestClient.from_environment()
+        self._cloud_tasks = []
+        self._cloud_pending = None
+        self._cloud_signature = None
+        self._cloud_pending_signature = None
+        self._cloud_upload_signature = None
+        self._cloud_last_sync_at = 0.0
+        self._cloud_sync_timer = QTimer(self)
+        self._cloud_sync_timer.setSingleShot(True)
+        self._cloud_sync_timer.timeout.connect(self._push_cloud_game)
+        self.daily_date = None
+        self.hints_used = 0
+        self.used_solve = False
+        self.saved_at_ms = 0
         self._build_ui()
         self._load_or_start()
         self.timer = QTimer(self)
@@ -230,7 +248,8 @@ class SudokuWindow(QMainWindow):
         page = QVBoxLayout(root)
         page.setContentsMargins(30, 24, 30, 24)
         page.setSpacing(15)
-        page.addWidget(self._label("DAILY RITUAL  ·  NO RUSH", "eyebrow"))
+        self.eyebrow = self._label("DAILY RITUAL  ·  NO RUSH", "eyebrow")
+        page.addWidget(self.eyebrow)
         page.addWidget(self._label("A little clarity.", "title"))
         page.addWidget(self._label("One quiet square at a time.", "subtitle"))
         controls = QHBoxLayout()
@@ -249,10 +268,26 @@ class SudokuWindow(QMainWindow):
         settings_button.setAccessibleName("Settings")
         settings_button.clicked.connect(self._show_settings)
         controls.addWidget(settings_button)
+        self.account_button = QPushButton("Account")
+        self.account_button.clicked.connect(self._show_account)
+        controls.addWidget(self.account_button)
         controls.addStretch()
         self.time_label = self._label("00:00", "stat")
         controls.addWidget(self.time_label)
         page.addLayout(controls)
+        cloud_controls = QHBoxLayout()
+        daily_button = QPushButton("Daily challenge")
+        daily_button.clicked.connect(self._start_daily_challenge)
+        cloud_controls.addWidget(daily_button)
+        leaderboard_button = QPushButton("Leaderboard")
+        leaderboard_button.clicked.connect(self._show_leaderboard)
+        cloud_controls.addWidget(leaderboard_button)
+        self.cloud_status = self._label(
+            "Guest mode · offline saves are on this device", "muted"
+        )
+        self.cloud_status.setWordWrap(True)
+        cloud_controls.addWidget(self.cloud_status, 1)
+        page.addLayout(cloud_controls)
         legend = QHBoxLayout()
         legend.addStretch()
         given_legend = self._label("8  PUZZLE", "legendGiven")
@@ -456,9 +491,14 @@ class SudokuWindow(QMainWindow):
                 ):
                     self.selected = (0, 0)
                 self.elapsed = max(0, int(state.get("elapsed", 0)))
+                self.daily_date = state.get("daily_date")
+                self.hints_used = max(0, int(state.get("hints_used", 0)))
+                self.used_solve = bool(state.get("used_solve", False))
+                self.saved_at_ms = max(0, int(state.get("saved_at_ms", 0)))
                 difficulty = state.get("difficulty", "medium")
                 if difficulty in {"easy", "medium", "hard", "expert"}:
                     self.difficulty.setCurrentText(difficulty)
+                    self.difficulty_name = difficulty
                 self.started_at = time.monotonic()
                 return
             except (OSError, ValueError, KeyError, TypeError):
@@ -474,6 +514,9 @@ class SudokuWindow(QMainWindow):
         self.armed_digit = None
         self.notes_mode = False
         self.elapsed = 0
+        self.daily_date = None
+        self.hints_used = 0
+        self.used_solve = False
         self.started_at = time.monotonic()
         if hasattr(self, "timer"):
             self.timer.start(1000)
@@ -591,6 +634,12 @@ class SudokuWindow(QMainWindow):
             self.timer.start(1000)
         self._save()
         self._render()
+        if (
+            self.daily_date
+            and self.grid == self.solution
+            and not self.used_solve
+        ):
+            self._submit_daily_run()
 
     def _erase(self):
         row, column = self.selected
@@ -649,6 +698,14 @@ class SudokuWindow(QMainWindow):
                 ],
             }
         )
+        if self.daily_date:
+            self.used_solve = True
+            self._run_cloud_task(
+                "reveal",
+                lambda: self.cloud.call(
+                    "recordDailySolutionReveal", {"date": self.daily_date}
+                ),
+            )
         self.grid = [row[:] for row in self.solution]
         self.notes = [[set() for _ in range(9)] for _ in range(9)]
         self.armed_digit = None
@@ -669,6 +726,17 @@ class SudokuWindow(QMainWindow):
                     )
 
     def _hint(self):
+        if self.daily_date:
+            self._run_cloud_task(
+                "hint",
+                lambda: self.cloud.call(
+                    "recordDailyHint", {"date": self.daily_date}
+                ),
+            )
+            return
+        self._apply_hint()
+
+    def _apply_hint(self):
         row, column = self.selected
         if self.grid[row][column]:
             row, column = next(
@@ -712,11 +780,430 @@ class SudokuWindow(QMainWindow):
             "notes": [[sorted(values) for values in row] for row in self.notes],
             "selected": list(self.selected),
             "elapsed": elapsed,
+            "daily_date": self.daily_date,
+            "hints_used": self.hints_used,
+            "used_solve": self.used_solve,
+            "saved_at_ms": int(time.time() * 1000),
         }
+        self.saved_at_ms = state["saved_at_ms"]
         try:
             _STATE_PATH.write_text(json.dumps(state), encoding="utf-8")
         except OSError:
             pass
+        if self.cloud.signed_in:
+            self._schedule_cloud_sync(state, elapsed)
+
+    def _local_state(self):
+        """Return the current offline game without mutable references."""
+        return {
+            "grid": [row[:] for row in self.grid],
+            "givens": [row[:] for row in self.givens],
+            "solution": [row[:] for row in self.solution],
+            "difficulty": getattr(self, "difficulty_name", "medium"),
+            "notes": [[sorted(items) for items in row] for row in self.notes],
+            "selected": list(self.selected),
+            "elapsed": self.elapsed,
+            "saved_at_ms": self.saved_at_ms,
+        }
+
+    def _cloud_game(self, state, elapsed):
+        """Convert desktop storage to the shared cross-platform schema."""
+        theme = "-".join(self.theme_name.replace("&", "").lower().split())
+        return {
+            "grid": state["grid"],
+            "givens": state["givens"],
+            "solution": state["solution"],
+            "difficulty": state["difficulty"],
+            "notes": [
+                state["notes"][row][column]
+                for row in range(9)
+                for column in range(9)
+            ],
+            "selected": self.selected[0] * 9 + self.selected[1],
+            "seconds": elapsed,
+            "theme": theme,
+            "rapidEntry": self.rapid_entry,
+            "dailyDate": self.daily_date,
+            "hintsUsed": self.hints_used,
+            "usedSolve": self.used_solve,
+            "savedAt": state["saved_at_ms"],
+        }
+
+    def _schedule_cloud_sync(self, state, elapsed):
+        """Coalesce cloud writes and ignore timer-only changes."""
+        game = self._cloud_game(state, elapsed)
+        signature = json.dumps(
+            {
+                key: value
+                for key, value in game.items()
+                if key not in {"seconds", "savedAt"}
+            },
+            sort_keys=True,
+        )
+        if signature == self._cloud_signature:
+            return
+        self._cloud_pending = game
+        self._cloud_pending_signature = signature
+        if not self._cloud_sync_timer.isActive():
+            delay = max(
+                1000,
+                30000
+                - int((time.monotonic() - self._cloud_last_sync_at) * 1000),
+            )
+            self._cloud_sync_timer.start(delay)
+
+    def _push_cloud_game(self):
+        """Upload the latest game on a background worker."""
+        if not self.cloud.signed_in or not self._cloud_pending:
+            return
+        game = self._cloud_pending
+        self._cloud_pending = None
+        self._cloud_upload_signature = self._cloud_pending_signature
+        self._cloud_pending_signature = None
+        self._run_cloud_task(
+            "sync", lambda: self.cloud.call("syncSavedGame", {"game": game})
+        )
+
+    def _run_cloud_task(self, action, operation):
+        """Run one network request without blocking the UI."""
+        task = CloudTask(action, operation)
+        self._cloud_tasks.append(task)
+        task.succeeded.connect(self._on_cloud_success)
+        task.failed.connect(self._on_cloud_failure)
+        task.finished.connect(task.deleteLater)
+        task.start()
+
+    @Slot(str, object)
+    def _on_cloud_success(self, action, result):
+        """Apply the result of a completed cloud request."""
+        task = self.sender()
+        if task in self._cloud_tasks:
+            self._cloud_tasks.remove(task)
+        if action == "auth":
+            profile, saved = result
+            self.cloud.display_name = profile.get(
+                "displayName", self.cloud.display_name
+            )
+            self.account_button.setText(
+                self.cloud.display_name[:12] or "Account"
+            )
+            self.cloud_status.setText(f"Signed in as {self.cloud.email}")
+            self.account_dialog.accept()
+            if saved.get("game"):
+                self._restore_cloud_game(saved["game"])
+            else:
+                self._schedule_cloud_sync(self._local_state(), self.elapsed)
+        elif action == "daily":
+            self._apply_daily_challenge(result)
+        elif action == "hint":
+            self.hints_used = result["hintsUsed"]
+            self._apply_hint()
+        elif action == "leaderboard":
+            self._show_leaderboard_results(result)
+        elif action == "submit":
+            self.status_label.setText(
+                "Daily result ranked."
+                if result.get("improved")
+                else "Your faster daily result is already ranked."
+            )
+        elif action == "sync":
+            self._cloud_signature = self._cloud_upload_signature
+            self._cloud_upload_signature = None
+            self._cloud_last_sync_at = time.monotonic()
+            self.cloud_status.setText("Cloud save up to date")
+            if self._cloud_pending:
+                self._schedule_cloud_sync(self._local_state(), self.elapsed)
+
+    @Slot(str, str)
+    def _on_cloud_failure(self, action, message):
+        """Show cloud errors while preserving offline play."""
+        task = self.sender()
+        if task in self._cloud_tasks:
+            self._cloud_tasks.remove(task)
+        self.cloud_status.setText(f"Cloud unavailable: {message}")
+        if action == "auth":
+            self.account_status.setText(message)
+        elif action == "daily":
+            self.status_label.setText(f"Daily challenge unavailable: {message}")
+        elif action == "leaderboard":
+            QMessageBox.warning(self, "Leaderboard", message)
+        elif action == "hint":
+            self.status_label.setText(f"Could not record daily hint: {message}")
+
+    def _show_account(self):
+        """Open email/password or Google sign-in for cloud play."""
+        if not self.cloud.configured:
+            QMessageBox.information(
+                self,
+                "Cloud account setup",
+                "Set STILL_SUDOKU_FIREBASE_API_KEY and "
+                "STILL_SUDOKU_FIREBASE_PROJECT_ID.\n\n"
+                "Google sign-in also needs STILL_SUDOKU_GOOGLE_CLIENT_ID.\n"
+                "See firebase/README.md for the setup instructions.",
+            )
+            return
+        if self.cloud.signed_in:
+            answer = QMessageBox.question(
+                self,
+                "Account",
+                f"Signed in as {self.cloud.email}.\n\nSign out?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            if answer == QMessageBox.StandardButton.Yes:
+                self.cloud.id_token = ""
+                self.cloud.refresh_token = ""
+                self.cloud.uid = ""
+                self.cloud.email = ""
+                self.account_button.setText("Account")
+                self.cloud_status.setText(
+                    "Guest mode · offline saves are on this device"
+                )
+            return
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Your Sudoku journey")
+        form = QFormLayout(dialog)
+        name = QLineEdit()
+        name.setPlaceholderText("Leaderboard name (for registration)")
+        email = QLineEdit()
+        email.setPlaceholderText("you@example.com")
+        password = QLineEdit()
+        password.setEchoMode(QLineEdit.EchoMode.Password)
+        password.setPlaceholderText("At least 6 characters")
+        form.addRow("Display name", name)
+        form.addRow("Email", email)
+        form.addRow("Password", password)
+        self.account_status = self._label(
+            "Sign in to sync games and join the daily rankings.", "muted"
+        )
+        self.account_status.setWordWrap(True)
+        form.addRow(self.account_status)
+        email_buttons = QHBoxLayout()
+        sign_in_button = QPushButton("Sign in")
+        register_button = QPushButton("Create account")
+        email_buttons.addWidget(sign_in_button)
+        email_buttons.addWidget(register_button)
+        form.addRow(email_buttons)
+        google_button = QPushButton("Continue with Google")
+        form.addRow(google_button)
+        sign_in_button.clicked.connect(
+            lambda: self._start_auth_task(
+                "signin", email.text(), password.text(), name.text()
+            )
+        )
+        register_button.clicked.connect(
+            lambda: self._start_auth_task(
+                "register", email.text(), password.text(), name.text()
+            )
+        )
+        google_button.clicked.connect(
+            lambda: self._start_auth_task("google", "", "", "")
+        )
+        self.account_dialog = dialog
+        dialog.exec()
+
+    def _start_auth_task(self, mode, email, password, display_name):
+        """Validate credentials and authenticate on a worker thread."""
+        if mode == "register" and len(display_name.strip()) < 3:
+            self.account_status.setText(
+                "Choose a display name with at least 3 characters."
+            )
+            return
+        self.account_status.setText("Connecting securely…")
+        if mode == "google":
+
+            def authenticate():
+                return self.cloud.sign_in_google()
+        elif mode == "register":
+
+            def authenticate():
+                return self.cloud.register(
+                    email.strip(), password, display_name.strip()
+                )
+        else:
+
+            def authenticate():
+                return self.cloud.sign_in(email.strip(), password)
+
+        def load_account():
+            authenticate()
+            return (
+                self.cloud.call("getProfile"),
+                self.cloud.call("getSavedGame"),
+            )
+
+        self._run_cloud_task("auth", load_account)
+
+    def _start_daily_challenge(self):
+        """Fetch today's shared Sudoku challenge."""
+        if not self.cloud.configured:
+            self.cloud_status.setText("Configure Firebase to use daily play.")
+            return
+        if not self.cloud.signed_in:
+            self._show_account()
+            if not self.cloud.signed_in:
+                return
+        self.status_label.setText("Fetching today's shared puzzle…")
+        self._run_cloud_task(
+            "daily", lambda: self.cloud.call("getDailyChallenge")
+        )
+
+    def _apply_daily_challenge(self, challenge):
+        """Replace the current game with today's shared puzzle."""
+        puzzle = challenge.get("puzzle")
+        solution = solve(puzzle) if isinstance(puzzle, list) else None
+        if solution is None or not is_valid(puzzle):
+            self.status_label.setText("The daily puzzle is invalid.")
+            return
+        self.grid = [row[:] for row in puzzle]
+        self.givens = [row[:] for row in puzzle]
+        self.solution = solution
+        self.notes = [[set() for _ in range(9)] for _ in range(9)]
+        self.history.clear()
+        self.selected = next(
+            (
+                (row, column)
+                for row in range(9)
+                for column in range(9)
+                if not self.grid[row][column]
+            ),
+            (0, 0),
+        )
+        self.elapsed = 0
+        self.started_at = time.monotonic()
+        self.daily_date = challenge.get("date")
+        self.hints_used = 0
+        self.used_solve = False
+        self.difficulty_name = challenge.get("difficulty", "medium")
+        self.difficulty.setCurrentText(self.difficulty_name)
+        self.eyebrow.setText(f"DAILY CHALLENGE  ·  {self.daily_date}")
+        self.timer.start(1000)
+        self.status_label.setText(
+            "Today's shared puzzle. Play fair, take your time."
+        )
+        self._save()
+        self._render()
+
+    def _submit_daily_run(self):
+        """Submit a correct daily solution unless it was revealed."""
+        if not self.daily_date or self.used_solve or not self.cloud.signed_in:
+            return
+        elapsed = self.elapsed + int(time.monotonic() - self.started_at)
+        data = {
+            "date": self.daily_date,
+            "grid": self.grid,
+            "elapsedSeconds": elapsed,
+            "hintsUsed": self.hints_used,
+            "usedSolve": self.used_solve,
+            "displayName": self.cloud.display_name,
+        }
+        self._run_cloud_task(
+            "submit", lambda: self.cloud.call("submitDailyRun", data)
+        )
+
+    def _show_leaderboard(self):
+        """Fetch today's ranked results."""
+        if not self.cloud.signed_in:
+            self._show_account()
+            if not self.cloud.signed_in:
+                return
+        self._run_cloud_task(
+            "leaderboard", lambda: self.cloud.call("getDailyLeaderboard")
+        )
+
+    def _show_leaderboard_results(self, result):
+        """Display daily ranking positions and times."""
+        dialog = QDialog(self)
+        dialog.setWindowTitle(f"Daily leaderboard · {result.get('date', '')}")
+        layout = QVBoxLayout(dialog)
+        entries = result.get("entries", [])
+        for entry in entries:
+            seconds = int(entry.get("score", 0))
+            row = QLabel(
+                f"{entry.get('rank', 0):>2}.  "
+                f"{entry.get('displayName', 'Player')}"
+                f" — {seconds // 60:02d}:{seconds % 60:02d}"
+                f" · {entry.get('hintsUsed', 0)} hints"
+            )
+            layout.addWidget(row)
+        if not entries:
+            layout.addWidget(QLabel("No ranked times yet. Be the first."))
+        dialog.exec()
+
+    def _restore_cloud_game(self, game):
+        """Apply a valid cloud game if it is newer than the desktop save."""
+        try:
+            grid, givens, solution = (
+                game[key] for key in ("grid", "givens", "solution")
+            )
+            saved_at = int(game.get("savedAt", 0))
+            if (
+                len(grid) != 9
+                or any(len(row) != 9 for row in grid)
+                or not is_valid(givens)
+                or not is_valid(solution)
+                or any(not value for row in solution for value in row)
+            ):
+                return
+            if saved_at <= self.saved_at_ms:
+                if saved_at < self.saved_at_ms:
+                    self._schedule_cloud_sync(self._local_state(), self.elapsed)
+                return
+            if any(
+                givens[row][column]
+                and givens[row][column] != solution[row][column]
+                for row in range(9)
+                for column in range(9)
+            ):
+                return
+            if any(
+                givens[row][column] and grid[row][column] != givens[row][column]
+                for row in range(9)
+                for column in range(9)
+            ):
+                return
+            self.grid = [row[:] for row in grid]
+            self.givens = [row[:] for row in givens]
+            self.solution = [row[:] for row in solution]
+            self.selected = divmod(
+                max(0, min(80, int(game.get("selected", 0)))), 9
+            )
+            self.elapsed = max(0, int(game.get("seconds", 0)))
+            notes = game.get("notes", [])
+            if len(notes) == 81:
+                self.notes = [
+                    [set(notes[row * 9 + column]) for column in range(9)]
+                    for row in range(9)
+                ]
+            self.daily_date = game.get("dailyDate")
+            self.hints_used = max(0, int(game.get("hintsUsed", 0)))
+            self.used_solve = bool(game.get("usedSolve", False))
+            self.saved_at_ms = saved_at
+            self.difficulty_name = game.get("difficulty", "medium")
+            self.difficulty.setCurrentText(self.difficulty_name)
+            theme_id = game.get("theme", "midnight-garden")
+            self.theme_name = next(
+                (
+                    name
+                    for name in THEMES
+                    if "-".join(name.replace("&", "").lower().split())
+                    == theme_id
+                ),
+                "Midnight Garden",
+            )
+            self.rapid_entry = bool(game.get("rapidEntry", True))
+            if self.daily_date:
+                self.eyebrow.setText(f"DAILY CHALLENGE  ·  {self.daily_date}")
+            if self.grid == self.solution:
+                self.timer.stop()
+            else:
+                self.started_at = time.monotonic()
+                self.timer.start(1000)
+            self._apply_theme(self.theme_name)
+            self._render()
+            self.status_label.setText("Your latest cloud game is ready.")
+        except (KeyError, TypeError, ValueError):
+            self.cloud_status.setText("Cloud save could not be restored.")
 
     def _render(self):
         row, column = self.selected

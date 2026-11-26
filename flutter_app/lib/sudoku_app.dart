@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'cloud_service.dart';
 import 'sudoku_engine.dart';
 import 'theme_palette.dart';
 
@@ -49,13 +51,22 @@ class _SudokuHomeState extends State<SudokuHome> {
   bool _busy = false;
   bool _loaded = false;
   Timer? _timer;
+  StreamSubscription<User?>? _authSubscription;
   Future<void> _saveQueue = Future<void>.value();
   String? _message;
+  String? _dailyDate;
+  int _hintsUsed = 0;
+  bool _usedSolve = false;
+  int _savedAt = 0;
+  User? _user;
+  bool _cloudReady = false;
+  String? _cloudError;
 
   @override
   void initState() {
     super.initState();
     unawaited(_restore());
+    unawaited(_initializeCloud());
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted || !_loaded || _isSolved) return;
       setState(() => _seconds++);
@@ -66,8 +77,25 @@ class _SudokuHomeState extends State<SudokuHome> {
   @override
   void dispose() {
     _timer?.cancel();
+    unawaited(_authSubscription?.cancel());
     _focusNode.dispose();
     super.dispose();
+  }
+
+  Future<void> _initializeCloud() async {
+    final cloud = CloudService.instance;
+    await cloud.initialize();
+    if (!mounted) return;
+    setState(() {
+      _cloudReady = cloud.ready;
+      _cloudError = cloud.setupError;
+      _user = cloud.currentUser;
+    });
+    _authSubscription = cloud.authChanges.listen((user) {
+      if (!mounted) return;
+      setState(() => _user = user);
+      if (user != null) unawaited(_restoreCloudGame());
+    });
   }
 
   bool get _isSolved =>
@@ -103,6 +131,10 @@ class _SudokuHomeState extends State<SudokuHome> {
             data['theme'] as String? ?? 'midnight-garden',
           );
           _rapidEntry = data['rapidEntry'] as bool? ?? true;
+          _dailyDate = data['dailyDate'] as String?;
+          _hintsUsed = (data['hintsUsed'] as num?)?.toInt() ?? 0;
+          _usedSolve = data['usedSolve'] as bool? ?? false;
+          _savedAt = (data['savedAt'] as num?)?.toInt() ?? 0;
           final storedNotes = data['notes'];
           if (storedNotes is List && storedNotes.length == 81) {
             _notes = storedNotes
@@ -149,7 +181,8 @@ class _SudokuHomeState extends State<SudokuHome> {
       );
 
   Future<void> _save() {
-    final data = jsonEncode({
+    _savedAt = DateTime.now().millisecondsSinceEpoch;
+    final state = {
       'grid': _grid,
       'givens': _givens,
       'solution': _solution,
@@ -159,9 +192,70 @@ class _SudokuHomeState extends State<SudokuHome> {
       'difficulty': _difficulty,
       'theme': _palette.id,
       'rapidEntry': _rapidEntry,
-    });
+      'dailyDate': _dailyDate,
+      'hintsUsed': _hintsUsed,
+      'usedSolve': _usedSolve,
+      'savedAt': _savedAt,
+    };
+    final data = jsonEncode(state);
     _saveQueue = _saveQueue.then((_) => _prefs.setString(_storageKey, data));
+    CloudService.instance.scheduleGameSync(state);
     return _saveQueue;
+  }
+
+  Future<void> _restoreCloudGame() async {
+    try {
+      final saved = await CloudService.instance.getSavedGame();
+      if (!mounted || saved == null) return;
+      final grid = _decodeGrid(saved['grid']);
+      final givens = _decodeGrid(saved['givens']);
+      final solution = _decodeGrid(saved['solution']);
+      final savedAt = (saved['savedAt'] as num?)?.toInt() ?? 0;
+      if (grid == null ||
+          givens == null ||
+          solution == null ||
+          !isValidGrid(givens) ||
+          !isValidGrid(solution) ||
+          savedAt <= _savedAt ||
+          solution.any((row) => row.contains(0))) {
+        if (savedAt < _savedAt) unawaited(_save());
+        return;
+      }
+      setState(() {
+        _grid = grid;
+        _givens = givens;
+        _solution = solution;
+        _seconds = (saved['seconds'] as num?)?.toInt() ?? 0;
+        _selected =
+            (saved['selected'] as num?)?.toInt().clamp(0, 80).toInt() ?? 40;
+        _difficulty = saved['difficulty'] as String? ?? 'medium';
+        _palette = SudokuPalette.byId(
+          saved['theme'] as String? ?? 'midnight-garden',
+        );
+        _rapidEntry = saved['rapidEntry'] as bool? ?? true;
+        _dailyDate = saved['dailyDate'] as String?;
+        _hintsUsed = (saved['hintsUsed'] as num?)?.toInt() ?? 0;
+        _usedSolve = saved['usedSolve'] as bool? ?? false;
+        _savedAt = savedAt;
+        final notes = saved['notes'];
+        if (notes is List && notes.length == 81) {
+          _notes = notes
+              .map(
+                (items) => (items as List)
+                    .whereType<num>()
+                    .map((value) => value.toInt())
+                    .toSet(),
+              )
+              .toList();
+        }
+        _message = 'Your latest cloud game is ready.';
+      });
+      await _save();
+    } catch (error) {
+      if (mounted) {
+        setState(() => _message = 'Could not restore cloud game: $error');
+      }
+    }
   }
 
   Future<void> _newGame() async {
@@ -178,6 +272,9 @@ class _SudokuHomeState extends State<SudokuHome> {
         _history.clear();
         _seconds = 0;
         _selected = 40;
+        _dailyDate = null;
+        _hintsUsed = 0;
+        _usedSolve = false;
         _armedDigit = null;
         _busy = false;
         _message = 'A fresh grid, just for you.';
@@ -234,6 +331,7 @@ class _SudokuHomeState extends State<SudokuHome> {
           : 'Nice move.';
     });
     unawaited(_save());
+    if (!_pencil && _isSolved) unawaited(_submitDailyRun());
   }
 
   void _erase() {
@@ -256,6 +354,14 @@ class _SudokuHomeState extends State<SudokuHome> {
       _busy = true;
       _message = 'A little clarity is on its way…';
     });
+    if (_dailyDate != null) {
+      _usedSolve = true;
+      try {
+        await CloudService.instance.recordDailySolutionReveal(_dailyDate!);
+      } catch (_) {
+        // The local reveal still disqualifies this run from ranking.
+      }
+    }
     for (var i = 0; i < 81; i++) {
       if (!mounted) return;
       final row = i ~/ 9;
@@ -276,7 +382,7 @@ class _SudokuHomeState extends State<SudokuHome> {
     await _save();
   }
 
-  void _hint() {
+  Future<void> _hint() async {
     final row = _selected ~/ 9;
     final column = _selected % 9;
     if (_givens[row][column] != 0 ||
@@ -288,8 +394,316 @@ class _SudokuHomeState extends State<SudokuHome> {
       );
       if (empty.isNotEmpty) setState(() => _selected = empty.first);
     }
+    if (_dailyDate != null) {
+      try {
+        final result = await CloudService.instance.recordDailyHint(_dailyDate!);
+        _hintsUsed = (result['hintsUsed'] as num).toInt();
+      } catch (error) {
+        if (mounted) {
+          setState(
+            () => _message = 'Connect to keep daily hints ranked: $error',
+          );
+        }
+        return;
+      }
+    }
     _enter(_solution[_selected ~/ 9][_selected % 9]);
     setState(() => _message = 'A small hint, right where you need it.');
+  }
+
+  Future<void> _submitDailyRun() async {
+    if (_dailyDate == null || _user == null || _usedSolve || !_cloudReady) {
+      return;
+    }
+    try {
+      final result = await CloudService.instance.submitDailyRun(
+        date: _dailyDate!,
+        grid: _grid,
+        elapsedSeconds: _seconds,
+        hintsUsed: _hintsUsed,
+        usedSolve: _usedSolve,
+      );
+      if (!mounted) return;
+      setState(
+        () => _message = result['improved'] == true
+            ? 'Your daily time has been ranked, including hint penalties.'
+            : 'Your best daily time is already on the board.',
+      );
+    } catch (error) {
+      if (mounted) {
+        setState(
+          () => _message = 'Solved locally; ranking could not be saved: $error',
+        );
+      }
+    }
+  }
+
+  Future<void> _startDailyChallenge() async {
+    if (!_cloudReady) {
+      setState(
+        () => _message =
+            _cloudError ?? 'Add Firebase settings to enable daily challenges.',
+      );
+      return;
+    }
+    if (_user == null) {
+      await _showAccount();
+      if (!mounted || _user == null) return;
+    }
+    setState(() {
+      _busy = true;
+      _message = 'Fetching today’s shared puzzle…';
+    });
+    try {
+      final challenge = await CloudService.instance.getDailyChallenge();
+      final puzzle = _decodeGrid(challenge['puzzle']);
+      if (puzzle == null || !isValidGrid(puzzle)) {
+        throw StateError('Invalid daily board.');
+      }
+      final solution = await compute(solveSudokuForIsolate, puzzle);
+      if (solution == null || !mounted) {
+        throw StateError('Daily board has no solution.');
+      }
+      setState(() {
+        _grid = copyGrid(puzzle);
+        _givens = copyGrid(puzzle);
+        _solution = solution;
+        _notes = List.generate(81, (_) => <int>{});
+        _history.clear();
+        _seconds = 0;
+        _selected = 40;
+        _difficulty = challenge['difficulty'] as String? ?? 'medium';
+        _dailyDate = challenge['date'] as String?;
+        _hintsUsed = 0;
+        _usedSolve = false;
+        _busy = false;
+        _message = 'Today’s shared puzzle. Play fair, take your time.';
+      });
+      await _save();
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _message = 'Daily challenge is unavailable: $error';
+        });
+      }
+    }
+  }
+
+  Future<void> _showAccount() async {
+    if (!_cloudReady) {
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Connect your Firebase project'),
+          content: Text(
+            _cloudError ??
+                'Add Firebase app settings with dart-define values. See '
+                    'flutter_app/README.md for the setup steps.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+    if (_user != null) {
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Your Sudoku journey'),
+          content: Text('Signed in as ${_user!.email ?? _user!.displayName}.'),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                await CloudService.instance.signOut();
+                if (context.mounted) Navigator.pop(context);
+              },
+              child: const Text('Sign out'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Done'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    final email = TextEditingController();
+    final password = TextEditingController();
+    final displayName = TextEditingController();
+    var registering = false;
+    var busy = false;
+    var errorMessage = '';
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, refresh) => AlertDialog(
+          title: Text(registering ? 'Create your account' : 'Welcome back'),
+          content: SizedBox(
+            width: 380,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (registering)
+                    TextField(
+                      controller: displayName,
+                      maxLength: 24,
+                      decoration: const InputDecoration(
+                        labelText: 'Display name',
+                      ),
+                    ),
+                  TextField(
+                    controller: email,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: const InputDecoration(labelText: 'Email'),
+                  ),
+                  TextField(
+                    controller: password,
+                    obscureText: true,
+                    decoration: const InputDecoration(labelText: 'Password'),
+                  ),
+                  if (errorMessage.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Text(
+                        errorMessage,
+                        style: TextStyle(color: _palette.error),
+                      ),
+                    ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: busy
+                        ? null
+                        : () async {
+                            refresh(() {
+                              busy = true;
+                              errorMessage = '';
+                            });
+                            try {
+                              await CloudService.instance.signInWithGoogle();
+                              if (dialogContext.mounted) {
+                                Navigator.pop(dialogContext);
+                              }
+                            } catch (error) {
+                              refresh(() => errorMessage = error.toString());
+                            } finally {
+                              refresh(() => busy = false);
+                            }
+                          },
+                    icon: const Icon(Icons.account_circle_outlined),
+                    label: const Text('Continue with Google'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: busy
+                  ? null
+                  : () => refresh(() => registering = !registering),
+              child: Text(registering ? 'Sign in instead' : 'Create account'),
+            ),
+            FilledButton(
+              onPressed: busy
+                  ? null
+                  : () async {
+                      refresh(() {
+                        busy = true;
+                        errorMessage = '';
+                      });
+                      try {
+                        if (registering) {
+                          await CloudService.instance.register(
+                            email.text.trim(),
+                            password.text,
+                            displayName.text.trim(),
+                          );
+                        } else {
+                          await CloudService.instance.signIn(
+                            email.text.trim(),
+                            password.text,
+                          );
+                        }
+                        if (dialogContext.mounted) Navigator.pop(dialogContext);
+                      } catch (error) {
+                        refresh(() => errorMessage = error.toString());
+                      } finally {
+                        refresh(() => busy = false);
+                      }
+                    },
+              child: Text(registering ? 'Create account' : 'Sign in'),
+            ),
+          ],
+        ),
+      ),
+    );
+    email.dispose();
+    password.dispose();
+    displayName.dispose();
+  }
+
+  Future<void> _showLeaderboard() async {
+    if (!_cloudReady || _user == null) {
+      await _showAccount();
+      if (!mounted || _user == null) return;
+    }
+    try {
+      final data = await CloudService.instance.getLeaderboard();
+      if (!mounted) return;
+      final entries = (data['entries'] as List? ?? const [])
+          .whereType<Map>()
+          .map((entry) => Map<String, dynamic>.from(entry))
+          .toList();
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Daily leaderboard · ${data['date']}'),
+          content: SizedBox(
+            width: 420,
+            child: entries.isEmpty
+                ? const Text('No ranked times yet. Be the first.')
+                : ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: entries.length,
+                    itemBuilder: (context, index) {
+                      final entry = entries[index];
+                      final seconds = (entry['score'] as num).toInt();
+                      final time =
+                          '${(seconds ~/ 60).toString().padLeft(2, '0')}:${(seconds % 60).toString().padLeft(2, '0')}';
+                      return ListTile(
+                        leading: CircleAvatar(child: Text('${entry['rank']}')),
+                        title: Text(
+                          entry['displayName'] as String? ?? 'Player',
+                        ),
+                        subtitle: Text('${entry['hintsUsed'] ?? 0} hints'),
+                        trailing: Text(
+                          time,
+                          style: TextStyle(color: _palette.accent),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+    } catch (error) {
+      if (mounted) setState(() => _message = 'Leaderboard unavailable: $error');
+    }
   }
 
   void _onKey(KeyEvent event) {
@@ -428,6 +842,11 @@ class _SudokuHomeState extends State<SudokuHome> {
           ),
           const Spacer(),
           IconButton(
+            onPressed: _showAccount,
+            icon: Icon(_user == null ? Icons.person_outline : Icons.cloud_done),
+            tooltip: _user?.email ?? 'Account and cloud sync',
+          ),
+          IconButton(
             onPressed: _showSettings,
             icon: const Icon(Icons.tune_rounded),
             tooltip: 'Settings',
@@ -517,6 +936,24 @@ class _SudokuHomeState extends State<SudokuHome> {
         ],
       ),
       const SizedBox(height: 12),
+      Row(
+        children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: _busy ? null : _startDailyChallenge,
+              icon: const Icon(Icons.today_rounded, size: 17),
+              label: const Text('Daily challenge'),
+            ),
+          ),
+          const SizedBox(width: 9),
+          IconButton.outlined(
+            onPressed: _showLeaderboard,
+            icon: const Icon(Icons.leaderboard_outlined),
+            tooltip: 'Daily leaderboard',
+          ),
+        ],
+      ),
+      const SizedBox(height: 8),
       _board(),
       const SizedBox(height: 16),
       _numberPad(),
@@ -532,7 +969,11 @@ class _SudokuHomeState extends State<SudokuHome> {
             () => setState(() => _pencil = !_pencil),
             active: _pencil,
           ),
-          _actionButton(Icons.lightbulb_outline_rounded, 'Hint', _hint),
+          _actionButton(
+            Icons.lightbulb_outline_rounded,
+            'Hint',
+            () => unawaited(_hint()),
+          ),
           _actionButton(Icons.backspace_outlined, 'Erase', _erase),
           _actionButton(
             Icons.undo_rounded,

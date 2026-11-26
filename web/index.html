@@ -15,10 +15,15 @@
   <main class="app-shell">
     <header class="masthead">
       <a class="brand" href="#" aria-label="Sudoku home"><span class="brand-mark">✳</span> STILL / 09</a>
-      <button class="icon-button" id="settings-button" aria-label="Open settings" title="Settings">⚙</button>
+      <div class="cloud-actions">
+        <button class="cloud-button" id="daily-challenge">Daily challenge</button>
+        <button class="cloud-button" id="leaderboard-button">Leaderboard</button>
+        <button class="cloud-button" id="account-button">Sign in</button>
+        <button class="icon-button" id="settings-button" aria-label="Open settings" title="Settings">⚙</button>
+      </div>
     </header>
     <section class="intro">
-      <p class="eyebrow"><span class="live-dot"></span> DAILY RITUAL · NO RUSH</p>
+      <p class="eyebrow" id="ritual-label"><span class="live-dot"></span> DAILY RITUAL · NO RUSH</p>
       <h1>A little<br><em>clarity.</em></h1>
       <p class="lede">One quiet square at a time.</p>
     </section>
@@ -45,6 +50,7 @@
         <button id="solve" title="Reveal the complete solution">✓ <span>Solve</span></button>
       </div>
       <div class="progress-row"><span id="progress-label">0 / 81 filled</span><div class="progress-track"><span id="progress"></span></div></div>
+      <p class="cloud-status" id="cloud-status">Playing as guest</p>
     </section>
     <footer><span>MADE FOR A MOMENT OF CALM</span><span>ARROWS · 1–9 FILL · N NOTES · S SOLVES</span></footer>
   </main>
@@ -69,8 +75,35 @@
       <div class="settings-buttons"><button class="settings-cancel" value="cancel">Cancel</button><button class="new-game settings-done" value="confirm">Confirm <span>✓</span></button></div>
     </form>
   </dialog>
+  <dialog class="cloud-dialog" id="account-dialog" aria-labelledby="account-title">
+    <form id="account-form">
+      <div class="settings-heading"><p class="eyebrow">YOUR SUDOKU JOURNEY</p><button class="dialog-close" type="button" onclick="document.querySelector('#account-dialog').close()" aria-label="Close account">×</button></div>
+      <h2 id="account-title">Welcome back</h2>
+      <p id="account-status" class="cloud-note" role="status" aria-live="polite"></p>
+      <div id="account-login-fields">
+        <button class="google-button" type="button" id="google-signin">Continue with Google</button>
+        <div class="or-divider"><span>or email</span></div>
+        <label class="cloud-label" for="account-display-name" id="display-name-field" hidden>Display name<input id="account-display-name" autocomplete="nickname" minlength="3" maxlength="24"></label>
+        <label class="cloud-label" for="account-email">Email<input id="account-email" type="email" autocomplete="email" required></label>
+        <label class="cloud-label" for="account-password">Password<input id="account-password" type="password" autocomplete="current-password" minlength="6" required></label>
+        <button class="new-game cloud-submit" id="account-submit" type="submit">Sign in</button>
+        <button class="cloud-link" id="account-mode-toggle" type="button">Create an account</button>
+      </div>
+      <button class="cloud-link signout-link" id="account-signout" type="button" hidden>Sign out</button>
+      <p class="cloud-footnote">Your puzzles and rankings sync across devices. Guest games stay on this device.</p>
+    </form>
+  </dialog>
+  <dialog class="cloud-dialog leaderboard-dialog" id="leaderboard-dialog" aria-labelledby="leaderboard-title">
+    <div class="settings-heading"><p class="eyebrow">TODAY’S CHALLENGE</p><button class="dialog-close" type="button" onclick="document.querySelector('#leaderboard-dialog').close()" aria-label="Close leaderboard">×</button></div>
+    <h2 id="leaderboard-title">Daily leaderboard</h2>
+    <p id="leaderboard-note" class="cloud-note">Sign in to see today’s fastest solves.</p>
+    <ol id="leaderboard-list" class="leaderboard-list"></ol>
+    <p class="cloud-footnote">Times include a two-minute penalty for each hint. Revealed solutions are not ranked.</p>
+  </dialog>
   <div class="toast" id="toast" role="status"></div>
   <div class="celebration" id="celebration" aria-hidden="true"></div>
+  <script src="firebase-config.js"></script>
   <script src="app.js"></script>
+  <script type="module" src="cloud.js"></script>
 </body>
 </html>

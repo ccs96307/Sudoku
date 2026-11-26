@@ -183,3 +183,5 @@ GeneratedPuzzle generatePuzzle(String difficulty) {
 
 GeneratedPuzzle generatePuzzleForIsolate(String difficulty) =>
     generatePuzzle(difficulty);
+
+SudokuGrid? solveSudokuForIsolate(SudokuGrid grid) => solveSudoku(grid);

@@ -7,4 +7,12 @@ venv/
 .flutter-plugins
 .flutter-plugins-dependencies
 build/
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+node_modules/
+.env
+.env.*
+!.env.example
+service-account*.json
 .DS_Store

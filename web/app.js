@@ -31,7 +31,7 @@ const boardElement = $('#board');
 const numberPad = $('#number-pad');
 const statusElement = $('#status');
 const timerElement = $('#timer');
-const state = {grid: [], givens: [], solution: [], selected: 0, notes: Array.from({length: 81}, () => new Set()), noteMode: false, history: [], seconds: 0, startedAt: Date.now()};
+const state = {grid: [], givens: [], solution: [], selected: 0, notes: Array.from({length: 81}, () => new Set()), noteMode: false, history: [], seconds: 0, startedAt: Date.now(), dailyChallengeDate: null, hintsUsed: 0, usedSolve: false, savedAt: 0};
 let toastTimeout;
 let armedDigit = null;
 let preferences = {theme: 'midnight-garden', rapidEntry: true};
@@ -169,13 +169,18 @@ function render(popIndex = -1) {
   $('#progress').style.width = `${filled / 81 * 100}%`;
 }
 function save() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({...state, notes: state.notes.map((notes) => [...notes]), history: []})); } catch (_) { showToast('Could not save this game on this device.'); }
+  state.savedAt = Date.now();
+  const saved = {...state, theme: preferences.theme, rapidEntry: preferences.rapidEntry, notes: state.notes.map((notes) => [...notes]), history: []};
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(saved)); } catch (_) { showToast('Could not save this game on this device.'); }
+  window.SudokuCloud?.saveGame(saved);
 }
 function newGame() {
   const {puzzle, solution} = makePuzzle($('#difficulty').value);
   celebrationShown = false; armedDigit = null;
   state.grid = puzzle; state.givens = cloneGrid(puzzle); state.solution = solution; state.difficulty = $('#difficulty').value; state.selected = puzzle.flat().findIndex((value) => !value);
   state.notes = Array.from({length: 81}, () => new Set()); state.history = []; state.noteMode = false; state.seconds = 0; state.startedAt = Date.now();
+  state.dailyChallengeDate = null; state.hintsUsed = 0; state.usedSolve = false;
+  $('#ritual-label').textContent = 'DAILY RITUAL · NO RUSH';
   $('#notes').classList.remove('active');
   statusElement.textContent = 'A fresh page. Take your time.';
   save(); render(); animateReveal();
@@ -212,7 +217,7 @@ function enter(value, index = state.selected) {
     state.grid[row][col] = value; state.notes[index].clear();
     const button = boardElement.children[index]; button.animate([{transform:'scale(.8)',opacity:.5},{transform:'scale(1)',opacity:1}],{duration:250,easing:'cubic-bezier(.2,.9,.3,1.4)'});
     if (!valid(state.grid)) { statusElement.textContent = 'That number conflicts with this row, column, or box.'; button.classList.add('conflict'); }
-    else if (isSolved()) { pauseClock(); statusElement.textContent = 'Beautifully done. You made space for clarity.'; showToast('Puzzle complete · beautifully done'); celebrate(); }
+    else if (isSolved()) { pauseClock(); statusElement.textContent = 'Beautifully done. You made space for clarity.'; showToast('Puzzle complete · beautifully done'); celebrate(); submitDailyResult(); }
     else statusElement.textContent = 'A good next step.';
   }
   save(); render(index);
@@ -261,8 +266,12 @@ function pauseClock() {
   state.startedAt = Date.now() - state.seconds * 1000;
   timerElement.textContent = `${String(Math.floor(state.seconds / 60)).padStart(2,'0')}:${String(state.seconds % 60).padStart(2,'0')}`;
 }
-function solvePuzzle() {
+async function solvePuzzle() {
   if (isSolved()) { statusElement.textContent = 'This puzzle is already solved.'; return; }
+  if (state.dailyChallengeDate && !state.usedSolve) {
+    try { await window.SudokuCloud?.recordDailyReveal(state.dailyChallengeDate); }
+    catch (error) { statusElement.textContent = `Could not record the solution reveal: ${error.message}`; }
+  }
   state.history.push({
     type: 'board',
     grid: cloneGrid(state.grid),
@@ -272,6 +281,7 @@ function solvePuzzle() {
   state.grid = cloneGrid(state.solution);
   state.notes = Array.from({length: 81}, () => new Set());
   state.noteMode = false; armedDigit = null;
+  if (state.dailyChallengeDate) state.usedSolve = true;
   $('#notes').classList.remove('active');
   statusElement.textContent = 'Solved. Use Undo to restore your board.';
   save(); render();
@@ -283,15 +293,61 @@ function solvePuzzle() {
   });
   showToast('Solution revealed');
 }
-function hint() {
+async function hint() {
   if (state.grid[Math.floor(state.selected / 9)][state.selected % 9]) {
     const index = state.grid.flat().findIndex((value) => !value);
     if (index >= 0) state.selected = index;
   }
   const index = state.selected, row = Math.floor(index / 9), col = index % 9;
-  if (!state.grid[row][col]) enter(state.solution[row][col], index);
+  if (!state.grid[row][col]) {
+    if (state.dailyChallengeDate) {
+      try {
+        const result = await window.SudokuCloud.recordDailyHint(state.dailyChallengeDate);
+        state.hintsUsed = result.hintsUsed;
+      } catch (error) {
+        statusElement.textContent = `Connect to keep daily hints ranked: ${error.message}`;
+        return;
+      }
+    }
+    enter(state.solution[row][col], index);
+  }
   statusElement.textContent = 'A little nudge, right where you needed it.';
   boardElement.children[index].classList.add('hint');
+}
+async function startDailyChallenge(challenge) {
+  const solution = solve(challenge.puzzle);
+  if (!solution) { statusElement.textContent = 'The daily puzzle could not be loaded.'; return; }
+  celebrationShown = false; armedDigit = null;
+  state.grid = cloneGrid(challenge.puzzle);
+  state.givens = cloneGrid(challenge.puzzle);
+  state.solution = solution;
+  state.selected = challenge.puzzle.flat().findIndex((value) => !value);
+  state.notes = Array.from({length: 81}, () => new Set());
+  state.history = []; state.noteMode = false; state.seconds = 0;
+  state.startedAt = Date.now(); state.dailyChallengeDate = challenge.date;
+  state.hintsUsed = 0; state.usedSolve = false;
+  $('#difficulty').value = challenge.difficulty || 'medium';
+  $('#ritual-label').textContent = `DAILY CHALLENGE · ${challenge.date}`;
+  $('#notes').classList.remove('active');
+  statusElement.textContent = 'Today’s shared puzzle. Make your place on the board.';
+  save(); render(); animateReveal();
+}
+async function submitDailyResult() {
+  if (!state.dailyChallengeDate || state.usedSolve || !window.SudokuCloud?.signedIn()) return;
+  try {
+    const result = await window.SudokuCloud.submitDaily({
+      date: state.dailyChallengeDate,
+      grid: state.grid,
+      elapsedSeconds: state.seconds,
+      hintsUsed: state.hintsUsed,
+      usedSolve: state.usedSolve,
+    });
+    statusElement.textContent = result.improved
+      ? `Ranked time saved · ${Math.floor(result.score / 60).toString().padStart(2, '0')}:${(result.score % 60).toString().padStart(2, '0')} with hint penalties.`
+      : 'You already have a faster ranked time for today.';
+  } catch (error) {
+    statusElement.textContent = `Solved locally; ranking could not be saved: ${error.message}`;
+  }
 }
 function showToast(message) {
   const toast = $('#toast'); toast.textContent = message; toast.classList.add('show'); clearTimeout(toastTimeout);
@@ -412,6 +468,27 @@ window.addEventListener('keydown', (event) => {
   else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') undo();
 });
 timerHandle = setInterval(() => { if (!isSolved()) state.seconds = Math.max(0, Math.floor((Date.now() - state.startedAt) / 1000)); timerElement.textContent = `${String(Math.floor(state.seconds / 60)).padStart(2,'0')}:${String(state.seconds % 60).padStart(2,'0')}`; save(); }, 1000);
+window.addEventListener('sudoku:daily-start', (event) => startDailyChallenge(event.detail));
+window.addEventListener('sudoku:cloud-game', (event) => {
+  const saved = event.detail;
+  if (!saved) return;
+  if ((saved.savedAt || 0) < state.savedAt) { window.SudokuCloud?.saveGame({...state, theme: preferences.theme, rapidEntry: preferences.rapidEntry, notes: state.notes.map((items) => [...items]), history: []}); return; }
+  if (!hasGridShape(saved.grid) || !hasGridShape(saved.givens) ||
+      !hasGridShape(saved.solution) || !valid(saved.givens) || !valid(saved.solution) ||
+      !matchesPuzzle(saved.givens, saved.solution)) return;
+  state.grid = cloneGrid(saved.grid); state.givens = cloneGrid(saved.givens); state.solution = cloneGrid(saved.solution);
+  state.selected = Number.isInteger(saved.selected) && saved.selected >= 0 && saved.selected < 81 ? saved.selected : 0;
+  state.notes = Array.from({length: 81}, (_, index) => new Set(Array.isArray(saved.notes?.[index]) ? saved.notes[index] : []));
+  state.seconds = Math.max(0, Number(saved.seconds) || 0); state.startedAt = Date.now() - state.seconds * 1000;
+  state.dailyChallengeDate = saved.dailyDate || saved.dailyChallengeDate || null; state.hintsUsed = Math.max(0, Number(saved.hintsUsed) || 0);
+  state.usedSolve = Boolean(saved.usedSolve); state.savedAt = saved.savedAt || 0;
+  if (THEMES.some((theme) => theme[0] === saved.theme)) { preferences.theme = saved.theme; applyTheme(saved.theme); savePreferences(); }
+  preferences.rapidEntry = saved.rapidEntry !== false;
+  state.difficulty = saved.difficulty || 'medium'; $('#difficulty').value = state.difficulty;
+  if (state.dailyChallengeDate) $('#ritual-label').textContent = `DAILY CHALLENGE · ${state.dailyChallengeDate}`;
+  statusElement.textContent = 'Your latest cloud game is ready.'; render();
+});
+window.addEventListener('sudoku:cloud-empty', () => save());
 buildBoard();
 buildThemePicker();
 try { preferences = {...preferences, ...JSON.parse(localStorage.getItem(PREFERENCES_KEY) || '{}')}; } catch (_) { /* Use the defaults. */ }
