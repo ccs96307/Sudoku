@@ -1253,7 +1253,10 @@ class _SudokuHomeState extends State<SudokuHome> {
               const SizedBox(height: 16),
               for (final level in ['easy', 'medium', 'hard', 'expert'])
                 ListTile(
-                  title: Text(level[0].toUpperCase() + level.substring(1)),
+                  title: Text(
+                    level[0].toUpperCase() + level.substring(1),
+                    style: TextStyle(color: _palette.text),
+                  ),
                   trailing: _difficulty == level
                       ? Icon(Icons.check_circle, color: _palette.accent)
                       : null,
@@ -1283,6 +1286,7 @@ class _SudokuHomeState extends State<SudokuHome> {
           title: Text('Your space', style: TextStyle(color: _palette.text)),
           content: SizedBox(
             width: 520,
+            height: MediaQuery.sizeOf(context).height * .55,
             child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1322,7 +1326,7 @@ class _SudokuHomeState extends State<SudokuHome> {
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
-                          childAspectRatio: 1.55,
+                          childAspectRatio: 1.25,
                           crossAxisSpacing: 9,
                           mainAxisSpacing: 9,
                         ),
